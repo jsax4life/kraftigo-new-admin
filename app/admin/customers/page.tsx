@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { DataTable } from "@/components/tables/data-table";
 import { adminUserColumns } from "@/components/tables/admin-user-columns";
 import { CsvExportButton } from "@/components/ui/csv-export-button";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useAdminCustomers } from "@/hooks/useAdminCustomers";
 import { usersAdminService } from "@/services/users-admin.service";
+
+const PAGE_SIZE = 20;
 
 function TableSkeleton() {
   return (
@@ -22,7 +26,11 @@ function TableSkeleton() {
 }
 
 export default function CustomersPage() {
-  const { data, isLoading, isError, error } = useAdminCustomers();
+  const [page, setPage] = useState(1);
+  const listParams = { page, limit: PAGE_SIZE };
+
+  const { data, isLoading, isError, error, isFetching } =
+    useAdminCustomers(listParams);
 
   return (
     <div className="space-y-4">
@@ -51,10 +59,25 @@ export default function CustomersPage() {
       )}
       {!isLoading && !isError && (
         <>
-          {!data?.length ? (
+          {!data?.items.length ? (
             <p className="text-xs text-slate-400">No customers found.</p>
           ) : (
-            <DataTable columns={adminUserColumns} data={data} />
+            <div className="space-y-2">
+              <DataTable
+                columns={adminUserColumns}
+                data={data.items}
+                serverPagination
+              />
+              <PaginationBar
+                page={page}
+                meta={{
+                  ...data.meta,
+                  limit: data.meta.limit ?? PAGE_SIZE
+                }}
+                onPageChange={setPage}
+                isLoading={isFetching}
+              />
+            </div>
           )}
         </>
       )}

@@ -96,8 +96,16 @@ export default function KraftersPageContent() {
           </p>
         </div>
         <CsvExportButton
-          label="Export krafters CSV"
-          onExport={() => usersAdminService.exportKraftersCsv()}
+          label={
+            tab === "intent"
+              ? "Export intent krafters CSV"
+              : "Export krafters CSV"
+          }
+          onExport={() =>
+            tab === "intent"
+              ? usersAdminService.exportIntentKraftersCsv()
+              : usersAdminService.exportKraftersCsv()
+          }
           disabled={activeQuery.isLoading}
         />
       </div>

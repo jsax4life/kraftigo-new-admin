@@ -105,5 +105,12 @@ export const usersAdminService = {
       "/api/admin/users/krafters/export",
       "kraftigo-krafters.csv"
     );
+  },
+
+  async exportIntentKraftersCsv(): Promise<void> {
+    await fetchCsvExport(
+      "/api/admin/users/intent-krafters/export",
+      "kraftigo-intent-krafters.csv"
+    );
   }
 };
