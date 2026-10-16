@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api-client";
+import { fetchCsvExport } from "@/lib/download-csv";
 import { WaitlistListSchema, type WaitlistEntry } from "@/types/waitlist";
 
 export const waitlistService = {
@@ -10,6 +11,10 @@ export const waitlistService = {
       throw new Error("Unexpected waitlist response shape");
     }
     return parsed.data;
+  },
+
+  async exportCsv(): Promise<void> {
+    await fetchCsvExport("/api/admin/waitlist/export", "kraftigo-waitlist.csv");
   }
 };
 

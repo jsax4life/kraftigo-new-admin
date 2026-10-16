@@ -17,23 +17,27 @@ type DataTableProps<TData, TValue> = {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   pageSizeOptions?: number[];
+  /** When true, show all rows and hide client pagination (use with server-side paging). */
+  serverPagination?: boolean;
 };
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  pageSizeOptions = [10, 25, 50]
+  pageSizeOptions = [10, 25, 50],
+  serverPagination = false
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  const pageSizeDefault = useMemo(
-    () =>
-      data.length > 0 && data.length < pageSizeOptions[0]
-        ? data.length
-        : pageSizeOptions[0],
-    [data.length, pageSizeOptions]
-  );
+  const pageSizeDefault = useMemo(() => {
+    if (serverPagination) {
+      return Math.max(data.length, 1);
+    }
+    return data.length > 0 && data.length < pageSizeOptions[0]
+      ? data.length
+      : pageSizeOptions[0];
+  }, [data.length, pageSizeOptions, serverPagination]);
 
   const table = useReactTable({
     data,
@@ -146,59 +150,62 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      {/* Pagination & Controls */}
-      <div className="p-4 border border-[#0000001A] bg-white rounded-2xl flex flex-col gap-4 sm:gap-0 sm:flex-row items-center justify-between text-xs font-medium shadow-sm">
-        <span className="text-slate-600 mb-3 sm:mb-0">
-          Showing {table.getCoreRowModel().rows.length === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}–{Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getCoreRowModel().rows.length)} of {table.getCoreRowModel().rows.length}
-        </span>
-        <div className="flex items-center gap-1">
-          {Array.from({ length: Math.min(5, table.getPageCount()) }).map((_, idx) => {
-            const pageNum = idx;
-            const isActive = table.getState().pagination.pageIndex === pageNum;
-            return (
-              <button
-                key={pageNum}
-                onClick={() => table.setPageIndex(pageNum)}
-                className={`h-6 w-8 sm:w-12 rounded flex items-center justify-center transition-colors ${
-                  isActive
-                    ? "bg-[#FF6600] text-white"
-                    : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                }`}
+      {!serverPagination && (
+        <div className="p-4 border border-[#0000001A] bg-white rounded-2xl flex flex-col gap-4 sm:gap-0 sm:flex-row items-center justify-between text-xs font-medium shadow-sm">
+          <div className="flex flex-wrap items-center gap-4 text-slate-600 mb-3 sm:mb-0">
+            <span>
+              Showing {table.getCoreRowModel().rows.length === 0 ? 0 : table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}–{Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getCoreRowModel().rows.length)} of {table.getCoreRowModel().rows.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-slate-500">Rows per page</span>
+              <select
+                className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-[#FF6600] font-medium shadow-sm"
+                value={table.getState().pagination.pageSize}
+                onChange={(e) => table.setPageSize(Number(e.target.value))}
               >
-                {pageNum + 1}
-              </button>
-            );
-          })}
-          <button
-            className="h-6 w-8 sm:w-12 rounded flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            className="h-6 w-8 sm:w-12 rounded flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+                {pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: Math.min(5, table.getPageCount()) }).map((_, idx) => {
+              const pageNum = idx;
+              const isActive = table.getState().pagination.pageIndex === pageNum;
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => table.setPageIndex(pageNum)}
+                  className={`h-6 w-8 sm:w-12 rounded flex items-center justify-center transition-colors ${
+                    isActive
+                      ? "bg-[#FF6600] text-white"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {pageNum + 1}
+                </button>
+              );
+            })}
+            <button
+              className="h-6 w-8 sm:w-12 rounded flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              className="h-6 w-8 sm:w-12 rounded flex items-center justify-center bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-medium">Rows per page</span>
-          <select
-            className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs outline-none focus:border-[#FF6600] font-medium shadow-sm"
-            value={table.getState().pagination.pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
-          >
-            {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

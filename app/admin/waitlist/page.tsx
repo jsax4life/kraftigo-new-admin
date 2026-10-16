@@ -3,7 +3,9 @@
 import { useWaitlist } from "@/hooks/useWaitlist";
 import { DataTable } from "@/components/tables/data-table";
 import { waitlistColumns } from "@/components/tables/waitlist-columns";
+import { CsvExportButton } from "@/components/ui/csv-export-button";
 import { useTableFilters } from "@/hooks/useTableFilters";
+import { waitlistService } from "@/services/waitlist.service";
 import type { WaitlistEntry } from "@/types/waitlist";
 
 export default function WaitlistPage() {
@@ -22,11 +24,18 @@ export default function WaitlistPage() {
             Live view of users who joined the Kraftigo waitlist.
           </p>
         </div>
-        {data && (
-          <span className="rounded-full bg-[#F6F6F6] border border-[#0000001A] px-4 py-1.5 text-xs text-slate-700 font-medium shadow-sm">
-            Total signups: <span className="font-bold text-slate-900">{data.length}</span>
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {data && (
+            <span className="rounded-full bg-[#F6F6F6] border border-[#0000001A] px-4 py-1.5 text-xs text-slate-700 font-medium shadow-sm">
+              Total signups: <span className="font-bold text-slate-900">{data.length}</span>
+            </span>
+          )}
+          <CsvExportButton
+            label="Export waitlist CSV"
+            onExport={() => waitlistService.exportCsv()}
+            disabled={isLoading}
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-4 text-xs shadow-sm">

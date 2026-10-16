@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AdminShell } from "@/components/layout/admin-shell";
+import { AdminEventsListener } from "@/components/fraud/admin-events-listener";
 
 export default function AdminLayout({
   children
@@ -10,6 +11,11 @@ export default function AdminLayout({
   // Server-side cookie check is skipped since we're using localStorage for accessToken
   // TODO: When backend sets httpOnly cookies, re-enable server-side check with getAdminFromRequest()
   
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AdminShell>
+      <AdminEventsListener />
+      {children}
+    </AdminShell>
+  );
 }
 

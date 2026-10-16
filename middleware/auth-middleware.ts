@@ -12,6 +12,9 @@ function requiredPermissionForPath(pathname: string): Permission | null {
   if (pathname.startsWith("/admin/work-eligibility")) return "MANAGE_USERS";
   if (pathname.startsWith("/admin/customers")) return "VIEW_USERS";
   if (pathname.startsWith("/admin/bookings")) return "VIEW_BOOKINGS";
+  if (pathname.startsWith("/admin/disputes")) return "VIEW_BOOKINGS";
+  if (pathname.startsWith("/admin/risk")) return "MANAGE_USERS";
+  if (pathname.startsWith("/admin/payment-operations")) return "VIEW_BOOKINGS";
   if (pathname.startsWith("/admin/services")) return "MANAGE_SERVICES";
   // dashboard, waitlist, settings – accessible to any authenticated admin
   return null;

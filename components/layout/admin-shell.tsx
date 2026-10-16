@@ -18,7 +18,14 @@ import {
   ChevronLeft,
   Search,
   ListChecks,
-  Bell
+  Bell,
+  BadgeCheck,
+  ShieldAlert,
+  Activity,
+  CreditCard,
+  BriefcaseBusiness,
+  Wrench,
+  BarChart2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import Loader from "../ui/loader";
@@ -44,11 +51,20 @@ const navItems: NavItem[] = [
     ]
   },
   { href: "/admin/krafts", label: "Kraft Management", icon: CheckCircle },
-  { href: "/admin/bookings", label: "Booking Management", icon: CheckCircle },
-  { href: "/admin/waitlist", label: "Waitlist Management", icon: ListChecks  },
+  { href: "/admin/bookings", label: "Booking Management", icon: BriefcaseBusiness },
+  { href: "/admin/waitlist", label: "Waitlist Management", icon: ListChecks },
+  { href: "/admin/disputes", label: "Disputes", icon: ShieldAlert },
+  { href: "/admin/risk", label: "Risk & Fraud", icon: Activity },
+  {
+    href: "/admin/payment-operations",
+    label: "Payment Operations",
+    icon: CreditCard
+  },
   { href: "/admin/financials", label: "Financials & Payouts", icon: Wallet },
   { href: "/admin/marketing", label: "Marketing & Ads", icon: ShoppingBag },
   { href: "/admin/support", label: "Customer Support", icon: Headphones },
+  { href: "/admin/services", label: "Services", icon: Wrench },
+  { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/admin/operations", label: "Operations & Content", icon: AlignLeft },
   { href: "/admin/settings", label: "Settings & Permissions", icon: Settings }
 ];
