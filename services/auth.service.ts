@@ -32,6 +32,33 @@ function removeAccessToken(): void {
   }
 }
 
+// User storage helpers (client-side only)
+function setAdminUser(user: AdminUser): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("kraftigo_admin_user", JSON.stringify(user));
+  }
+}
+
+function getAdminUser(): AdminUser | null {
+  if (typeof window !== "undefined") {
+    const userStr = window.localStorage.getItem("kraftigo_admin_user");
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+function removeAdminUser(): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem("kraftigo_admin_user");
+  }
+}
+
 // Transform API user to AdminUser (filter roles to admin roles only)
 function transformToAdminUser(apiUser: any): AdminUser | null {
   const adminRoles = ["SUPER_ADMIN", "ADMIN", "SUPPORT", "ANALYST"];
@@ -110,9 +137,10 @@ export const authService = {
       throw new Error("Access denied: Admin role required");
     }
 
-    // Store access token
+    // Store access token and user info
     setAccessToken(accessToken);
-    console.log("authService.login: Access token stored");
+    setAdminUser(adminUser);
+    console.log("authService.login: Access token and user stored");
 
     console.log("authService.login: Login successful, returning adminUser", adminUser);
     return adminUser;
@@ -130,6 +158,7 @@ export const authService = {
       // Continue even if logout endpoint fails
     } finally {
       removeAccessToken();
+      removeAdminUser();
     }
   },
 
@@ -139,9 +168,8 @@ export const authService = {
    * - For now, returns null (user state is managed via login mutation cache).
    */
   async getCurrentUser(): Promise<AdminUser | null> {
-    // Placeholder: return null until /api/auth/me endpoint is implemented
-    // The logged-in user state is maintained via React Query mutation cache
-    return null;
+    // Read the user from local storage to prevent losing session on HMR/reloads
+    return getAdminUser();
   },
 
   /**
