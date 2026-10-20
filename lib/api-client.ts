@@ -26,8 +26,19 @@ export class ApiError extends Error implements ApiErrorShape {
   }
 }
 
-const baseURL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.xn--kraftig-g1a.com";
+export function getApiBaseUrl(): string {
+  if (
+    process.env.NEXT_PUBLIC_USE_TEST_API === "true" &&
+    process.env.NEXT_PUBLIC_API_TEST_URL
+  ) {
+    return process.env.NEXT_PUBLIC_API_TEST_URL;
+  }
+  return (
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.xn--kraftig-g1a.com"
+  );
+}
+
+const baseURL = getApiBaseUrl();
 
 const instance: AxiosInstance = axios.create({
   baseURL,

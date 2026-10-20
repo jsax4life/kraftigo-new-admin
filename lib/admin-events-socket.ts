@@ -2,6 +2,7 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
+import { getApiBaseUrl } from "@/lib/api-client";
 
 export type AdminSocketEvent = {
   type?: string;
@@ -13,11 +14,7 @@ export type AdminSocketEvent = {
 };
 
 function getSocketBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_WS_BASE_URL ??
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    "https://api.xn--kraftig-g1a.com"
-  );
+  return process.env.NEXT_PUBLIC_WS_BASE_URL ?? getApiBaseUrl();
 }
 
 function getAccessToken(): string | null {

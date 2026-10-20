@@ -1,4 +1,5 @@
 import type { WorkEligibilitySubmission } from "@/types/work-eligibility";
+import { getApiBaseUrl } from "@/lib/api-client";
 
 export function getKrafterLabel(sub: WorkEligibilitySubmission): string {
   const nested = sub.krafter ?? sub.user;
@@ -34,7 +35,7 @@ export function getDocumentHref(sub: WorkEligibilitySubmission): string | null {
 
   const base =
     typeof process !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
+      ? getApiBaseUrl()
       : "";
   if (direct && base) {
     const path = direct.startsWith("/") ? direct : `/${direct}`;

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Info,
@@ -20,38 +20,22 @@ import {
 } from "recharts";
 import Image from "next/image";
 import { KrafterLocationsPanel } from "@/components/krafters/krafter-locations-panel";
-import { useDashboardStats } from "@/hooks/useDashboardStats";
+import {
+  useDashboardStats,
+  useOverviewSummary,
+  useLiveBookings,
+  useCriticalPulse
+} from "@/hooks/useDashboardStats";
+import { dashboardService } from "@/services/dashboard.service";
+import { useAlertModal } from "@/components/ui/alert-modal";
+import type { OverviewSummaryPeriod } from "@/types/dashboard";
 
 function formatCount(value: number | undefined): string {
   if (value == null) return "—";
   return value.toLocaleString();
 }
 
-// --- DUMMY DATA FOR CHART & MONITOR ---
-const chartData = [
-  { name: "Jan", revenue: 12000, krafts: 5000 },
-  { name: "Feb", revenue: 15000, krafts: 14000 },
-  { name: "", revenue: 6000, krafts: 13500 },
-  { name: "Mar", revenue: 9000, krafts: 13000 },
-  { name: "", revenue: 14500, krafts: 21000 },
-  { name: "Apr", revenue: 14000, krafts: 8000 },
-  { name: "", revenue: 25000, krafts: 7000 },
-  { name: "May", revenue: 24000, krafts: 6500 },
-  { name: "", revenue: 30000, krafts: 15500 },
-  { name: "Jun", revenue: 21000, krafts: 13000 },
-  { name: "", revenue: 24000, krafts: 25000 },
-  { name: "Jul", revenue: 17500, krafts: 26000 },
-  { name: "", revenue: 23000, krafts: 28000 },
-  { name: "Aug", revenue: 24000, krafts: 31000 },
-];
 
-const liveBookings = [
-  { id: 1, name: "Edith Booked Ray", code: "#BK-239839", service: "Cooking", value: "$100", status: "Started", action: "View Details" },
-  { id: 2, name: "Marcus R Booked Peace R", code: "#BK-239839", service: "Cooking", value: "$323", status: "Finished", action: "View Details" },
-  { id: 3, name: "Edith Booked Ray", code: "#BK-239839", service: "Plumbing", value: "$433", status: "Payment Failed", action: "Retry Payment", actionColor: "text-[#FF6600]" },
-  { id: 4, name: "Marcus R Booked Peace R", code: "#BK-239839", service: "Wood working", value: "$32", status: "Pending", action: "View Details" },
-  { id: 5, name: "Edith Booked Ray", code: "#BK-239839", service: "Yard Work", value: "$1000", status: "In Transit", action: "View Details" },
-];
 
 const verificationQueue = [
   { id: 1, name: "Natelie Gates", role: "Master Plumber" },
@@ -62,11 +46,46 @@ const verificationQueue = [
 ];
 
 // --- TOOLTIPS & DOTS ---
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({
+  active,
+  payload,
+  isRevenue,
+  currentLabel,
+  previousLabel
+}: any) => {
   if (active && payload && payload.length) {
+    const point = payload[0]?.payload;
+    if (!point) return null;
+    const currentVal = Number(
+      isRevenue ? point.revenueCurrent ?? 0 : point.activeKraftsCurrent ?? 0
+    );
+    const prevVal = Number(
+      isRevenue ? point.revenuePrevious ?? 0 : point.activeKraftsPrevious ?? 0
+    );
+
     return (
-      <div className="bg-white px-2 py-1 shadow-md border border-slate-100 rounded text-sm font-medium text-slate-800">
-        £{payload[0].value.toLocaleString()}
+      <div className="bg-white px-3 py-2.5 shadow-lg border border-slate-200/90 rounded-xl text-xs space-y-1.5 min-w-[190px]">
+        <div className="font-bold text-slate-900 border-b border-slate-100 pb-1 text-[11px]">
+          {point.monthLabel ?? point.month}
+        </div>
+        <div className="flex items-center justify-between gap-3 text-[11px]">
+          <span className="flex items-center gap-1.5 text-slate-700">
+            <span className="h-2 w-2 rounded-full bg-[#FF6600]" />
+            <span className="truncate max-w-[100px]">{currentLabel ?? "Current"}:</span>
+          </span>
+          <span className="font-bold text-slate-900">
+            {isRevenue ? `£${currentVal.toLocaleString()}` : `${currentVal.toLocaleString()} Krafts`}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-[11px]">
+          <span className="flex items-center gap-1.5 text-slate-500">
+            <span className="h-2 w-2 rounded-full bg-slate-400" />
+            <span className="truncate max-w-[100px]">{previousLabel ?? "Previous"}:</span>
+          </span>
+          <span className="font-medium text-slate-600">
+            {isRevenue ? `£${prevVal.toLocaleString()}` : `${prevVal.toLocaleString()} Krafts`}
+          </span>
+        </div>
       </div>
     );
   }
@@ -98,6 +117,72 @@ const CustomActiveDot = (props: any) => {
 export default function DashboardPage() {
   const { data, isLoading, isError, error } = useDashboardStats();
 
+  const [summaryPeriod, setSummaryPeriod] =
+    useState<OverviewSummaryPeriod>("this_month");
+  const {
+    data: summaryData,
+    isLoading: isSummaryLoading,
+    isError: isSummaryError,
+    error: summaryError
+  } = useOverviewSummary(summaryPeriod);
+
+  const [livePage, setLivePage] = useState(1);
+  const [liveSearch, setLiveSearch] = useState("");
+  const [activeOnly, setActiveOnly] = useState(false);
+
+  const {
+    data: liveBookingsData,
+    isLoading: isLiveLoading,
+    isError: isLiveError,
+    error: liveError
+  } = useLiveBookings({
+    page: livePage,
+    limit: 5,
+    search: liveSearch.trim() || undefined,
+    activeOnly: activeOnly ? true : undefined
+  });
+
+  const liveItems = liveBookingsData?.items ?? [];
+  const liveTotal = liveBookingsData?.meta?.total ?? 0;
+  const liveTotalPages =
+    liveBookingsData?.meta?.totalPages ?? Math.max(1, Math.ceil(liveTotal / 5));
+
+  // Critical Pulse chart query
+  const [pulseMonths, setPulseMonths] = useState<number>(7);
+  const [pulseMetric, setPulseMetric] = useState<"revenue" | "krafts">("revenue");
+
+  const {
+    data: pulseData,
+    isLoading: isPulseLoading
+  } = useCriticalPulse({ months: pulseMonths });
+
+  const pulsePoints = pulseData?.points ?? [];
+  const currentSeriesLabel =
+    pulseData?.comparison?.currentSeriesLabel ?? "This Month";
+  const previousSeriesLabel =
+    pulseData?.comparison?.previousSeriesLabel ?? "Last Month";
+
+  const { showAlert, AlertModalComponent } = useAlertModal();
+  const [isExportingLive, setIsExportingLive] = useState(false);
+
+  const handleExportLiveBookings = async () => {
+    try {
+      setIsExportingLive(true);
+      await dashboardService.exportLiveBookingsCsv({
+        search: liveSearch.trim() || undefined,
+        activeOnly: activeOnly ? true : undefined
+      });
+    } catch (err: any) {
+      showAlert({
+        title: "Export Failed",
+        message: err?.message ?? "An unexpected error occurred while exporting live bookings.",
+        type: "error"
+      });
+    } finally {
+      setIsExportingLive(false);
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8 pb-12 font-sans bg-white text-slate-900">
       {/* Top Controls */}
@@ -108,68 +193,116 @@ export default function DashboardPage() {
             Platform performance metrics, operational queue, and live activities.
           </p>
         </div>
-        <button className="flex items-center gap-2 rounded-md bg-[#F6F6F6] px-3 py-1.5 text-[12px] text-black font-medium hover:bg-slate-200 transition-colors">
-          This Month <ChevronDown className="h-3 w-3" />
-        </button>
+        <select
+          value={summaryPeriod}
+          onChange={(e) => setSummaryPeriod(e.target.value as OverviewSummaryPeriod)}
+          className="rounded-md bg-[#F6F6F6] px-3 py-1.5 text-[12px] text-black font-semibold border-none outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+        >
+          <option value="this_month">This Month</option>
+          <option value="last_month">Last Month</option>
+          <option value="last_7_days">Last 7 Days</option>
+          <option value="last_30_days">Last 30 Days</option>
+          <option value="all_time">All Time</option>
+        </select>
       </div>
 
-      {isError && (
+      {(isError || isSummaryError) && (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-600">
-          Failed to load live platform stats: {error?.message ?? "Unknown error"}
+          Failed to load live platform stats: {summaryError?.message || error?.message || "Unknown error"}
         </div>
       )}
 
-      {/* Primary Metrics Row (Connected to real backend stats) */}
+      {/* Primary Metrics Row (Connected to GET /api/admin/overview/summary) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Total Revenue */}
         <div className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-5">
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
-            <span>Total Users</span>
+            <span>Total Revenue</span>
             <Info className="h-4 w-4 text-black" />
           </div>
           <div className="mt-2 text-[22px] font-mabry font-extrabold text-slate-900">
-            {isLoading ? "…" : formatCount(data?.totalUsers)}
+            {isSummaryLoading
+              ? "…"
+              : `£${(summaryData?.metrics?.totalRevenue?.value ?? 0).toLocaleString()}`}
+          </div>
+          <div className="mt-2 text-[11px] text-slate-500 font-medium">
+            {summaryData?.range?.label ?? "This month"}
           </div>
         </div>
 
-        <Link
-          href="/admin/krafters"
-          className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-5 transition-colors hover:border-[#FF6600]/40"
-        >
+        {/* Active Users */}
+        <div className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-5">
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
-            <span>Active Krafters</span>
+            <span>Active Users</span>
             <Info className="h-4 w-4 text-black" />
           </div>
-          <div className="mt-2 text-[22px] font-mabry font-extrabold text-slate-900">
-            {isLoading ? "…" : formatCount(data?.activeKrafters)}
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-[22px] font-mabry font-extrabold text-slate-900">
+              {isSummaryLoading
+                ? "…"
+                : formatCount(summaryData?.metrics?.activeUsers?.value)}
+            </span>
+            {summaryData?.metrics?.activeUsers?.changePercent != null && (
+              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                {summaryData.metrics.activeUsers.changePercent > 0 ? "+" : ""}
+                {summaryData.metrics.activeUsers.changePercent}%
+              </span>
+            )}
           </div>
-        </Link>
+          <div className="mt-2 text-[11px] text-slate-500 font-medium">
+            Total registered: {isLoading ? "…" : formatCount(data?.totalUsers)}
+          </div>
+        </div>
 
+        {/* Total Active Krafts */}
         <Link
           href="/admin/bookings"
           className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-5 transition-colors hover:border-[#FF6600]/40"
         >
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
-            <span>Open Bookings</span>
+            <span>Total Active Krafts</span>
             <Info className="h-4 w-4 text-black" />
           </div>
           <div className="mt-2 text-[22px] font-mabry font-extrabold text-slate-900">
-            {isLoading ? "…" : formatCount(data?.openBookings)}
+            {isSummaryLoading
+              ? "…"
+              : formatCount(summaryData?.metrics?.totalActiveKrafts?.value)}
           </div>
           <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full w-[45%] bg-[#FF6600]" />
+            <div
+              className="h-full bg-[#FF6600]"
+              style={{
+                width: `${Math.max(
+                  5,
+                  Math.min(
+                    100,
+                    summaryData?.metrics?.totalActiveKrafts?.utilizationPercent ?? 0
+                  )
+                )}%`
+              }}
+            />
+          </div>
+          <div className="mt-1 text-[11px] text-slate-500 font-medium">
+            {summaryData?.metrics?.totalActiveKrafts?.registeredKrafters ?? 0} registered krafters
           </div>
         </Link>
 
+        {/* Open Support Tickets */}
         <Link
-          href="/admin/bookings"
+          href="/admin/disputes"
           className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-5 transition-colors hover:border-[#FF6600]/40"
         >
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
-            <span>Total Bookings</span>
+            <span>Open Support Tickets</span>
             <Info className="h-4 w-4 text-black" />
           </div>
           <div className="mt-2 text-[22px] font-mabry font-extrabold text-slate-900">
-            {isLoading ? "…" : formatCount(data?.totalBookings)}
+            {isSummaryLoading
+              ? "…"
+              : formatCount(summaryData?.metrics?.openSupportTickets?.value)}
+          </div>
+          <div className="mt-2 text-[11px] text-slate-500 font-medium">
+            {summaryData?.metrics?.openSupportTickets?.disputesOpen ?? 0} disputes · {summaryData?.metrics?.openSupportTickets?.operationalAlertsOpen ?? 0} alerts
           </div>
         </Link>
       </div>
@@ -210,77 +343,129 @@ export default function DashboardPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-garet font-[850] text-black">Critical Pulse</h2>
-          <button className="flex items-center gap-2 rounded-md bg-[#F6F6F6] px-3 py-1.5 text-[12px] text-black font-medium hover:bg-slate-200 transition-colors">
-            This Month <ChevronDown className="h-3 w-3" />
-          </button>
+          <select
+            value={pulseMonths}
+            onChange={(e) => setPulseMonths(Number(e.target.value))}
+            className="rounded-md bg-[#F6F6F6] px-3 py-1.5 text-[12px] text-black font-semibold border-none outline-none cursor-pointer hover:bg-slate-200 transition-colors"
+          >
+            <option value={3}>Last 3 Months</option>
+            <option value={6}>Last 6 Months</option>
+            <option value={7}>Last 7 Months</option>
+            <option value={12}>Last 12 Months</option>
+          </select>
         </div>
+
         <div className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-6 h-[400px] flex flex-col">
-          <div className="flex items-center gap-6 mb-8 mt-2">
-            <div className="flex items-center gap-2">
-              <span className="rounded-md bg-[#FF6600] px-3 py-1 text-[14px] font-bold text-white">
-                Total Revenue
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-[14px] font-bold text-black">
+          <div className="flex items-center gap-4 mb-8 mt-2">
+            <button
+              onClick={() => setPulseMetric("revenue")}
+              className={`rounded-md px-3 py-1 text-[13px] font-bold transition-all ${
+                pulseMetric === "revenue"
+                  ? "bg-[#FF6600] text-white shadow-sm"
+                  : "text-black hover:text-[#FF6600]"
+              }`}
+            >
+              Total Revenue
+            </button>
+            <button
+              onClick={() => setPulseMetric("krafts")}
+              className={`rounded-md px-3 py-1 text-[13px] font-bold transition-all ${
+                pulseMetric === "krafts"
+                  ? "bg-[#FF6600] text-white shadow-sm"
+                  : "text-black hover:text-[#FF6600]"
+              }`}
+            >
               Total active Krafts
-            </div>
+            </button>
           </div>
 
           <div className="flex items-center gap-8 mb-6 ml-4 text-[11px] text-slate-500 font-medium">
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-slate-400" /> Last Month
+              <div className="h-2 w-2 rounded-full bg-slate-400" /> {previousSeriesLabel}
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-[#FF6600]" /> This Month
+              <div className="h-2 w-2 rounded-full bg-[#FF6600]" /> {currentSeriesLabel}
             </div>
           </div>
 
           <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF6600" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#FF6600" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 10, fill: "#666" }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 10, fill: "#666" }}
-                  tickFormatter={(val) => val === 0 ? "0" : `${val / 1000}K`}
-                  ticks={[0, 10000, 20000, 30000]}
-                />
-                <Tooltip content={<CustomTooltip />} cursor={false} />
-                <Area
-                  type="monotone"
-                  dataKey="krafts"
-                  stroke="#999999"
-                  strokeWidth={1.5}
-                  strokeDasharray="3 3"
-                  fill="none"
-                  dot={false}
-                  activeDot={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#FF6600"
-                  strokeWidth={1.5}
-                  fillOpacity={1}
-                  fill="url(#colorRevenue)"
-                  dot={<CustomDot />}
-                  activeDot={<CustomActiveDot />}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {isPulseLoading ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-500">
+                Loading critical pulse chart…
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={pulsePoints}
+                  margin={{ top: 20, right: 30, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#FF6600" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#FF6600" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="monthLabel"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: "#666" }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: "#666" }}
+                    tickFormatter={(val) =>
+                      val === 0
+                        ? "0"
+                        : pulseMetric === "revenue"
+                        ? `£${val >= 1000 ? `${(val / 1000).toFixed(0)}K` : val}`
+                        : `${val >= 1000 ? `${(val / 1000).toFixed(0)}K` : val}`
+                    }
+                  />
+                  <Tooltip
+                    content={
+                      <CustomTooltip
+                        isRevenue={pulseMetric === "revenue"}
+                        currentLabel={currentSeriesLabel}
+                        previousLabel={previousSeriesLabel}
+                      />
+                    }
+                    cursor={false}
+                  />
+                  {/* Dotted grey line for previous period comparison */}
+                  <Area
+                    type="monotone"
+                    dataKey={
+                      pulseMetric === "revenue"
+                        ? "revenuePrevious"
+                        : "activeKraftsPrevious"
+                    }
+                    stroke="#999999"
+                    strokeWidth={1.5}
+                    strokeDasharray="3 3"
+                    fill="none"
+                    dot={false}
+                    activeDot={false}
+                  />
+                  {/* Solid orange line for current period */}
+                  <Area
+                    type="monotone"
+                    dataKey={
+                      pulseMetric === "revenue"
+                        ? "revenueCurrent"
+                        : "activeKraftsCurrent"
+                    }
+                    stroke="#FF6600"
+                    strokeWidth={1.5}
+                    fillOpacity={1}
+                    fill="url(#colorRevenue)"
+                    activeDot={<CustomActiveDot />}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
@@ -291,16 +476,36 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
             <h2 className="text-xl font-garet font-[850] text-black">Live Booking Monitor</h2>
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-                Export <Image src="/export.svg" alt="image" height={16} width={16} />
+              <button
+                onClick={handleExportLiveBookings}
+                disabled={isExportingLive}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {isExportingLive ? "Exporting…" : "Export"}
+                <Image src="/export.svg" alt="Export CSV" height={14} width={14} />
               </button>
-              <button className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
-                Filters <ChevronDown className="h-3 w-3" />
+              <button
+                onClick={() => {
+                  setActiveOnly((prev) => !prev);
+                  setLivePage(1);
+                }}
+                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  activeOnly
+                    ? "border-[#FF6600] bg-[#FFF0E5] text-[#FF6600]"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {activeOnly ? "Active Bookings" : "All Bookings"}
               </button>
               <div className="relative flex items-center">
                 <Search className="absolute left-3 h-3.5 w-3.5 text-slate-400" />
                 <input
                   type="text"
+                  value={liveSearch}
+                  onChange={(e) => {
+                    setLiveSearch(e.target.value);
+                    setLivePage(1);
+                  }}
                   placeholder="Search bookings..."
                   className="w-64 rounded-lg border border-slate-200 bg-[#F9F9F9] py-1.5 pl-9 pr-4 text-xs outline-none focus:border-[#FF6600]"
                 />
@@ -321,40 +526,125 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {liveBookings.map((item, index) => (
-                  <tr
-                    key={item.id}
-                    className={index % 2 === 0 ? "bg-[#E6E6E6]" : "bg-[#F6F6F6]"}
-                  >
-                    <td className="px-6 py-4 font-semibold text-black">{item.code}</td>
-                    <td className="px-6 py-4 font-medium text-black">{item.name}</td>
-                    <td className="px-6 py-4 text-black">{item.service}</td>
-                    <td className="px-6 py-4 font-bold text-black">{item.value}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                          item.status === "Started"
-                            ? "bg-blue-100 text-blue-700"
-                            : item.status === "Finished"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : item.status === "Payment Failed"
-                            ? "bg-rose-100 text-rose-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={`cursor-pointer font-bold ${item.actionColor || "text-black"} hover:underline`}>
-                        {item.action}
-                      </span>
+                {isLiveLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-xs text-slate-500">
+                      Loading live bookings…
                     </td>
                   </tr>
-                ))}
+                ) : isLiveError ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-xs text-rose-500">
+                      Failed to load bookings: {liveError?.message ?? "Unknown error"}
+                    </td>
+                  </tr>
+                ) : liveItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-xs text-slate-500">
+                      No live bookings found.
+                    </td>
+                  </tr>
+                ) : (
+                  liveItems.map((item, index) => {
+                    const bookingCode =
+                      item.code || item.bookingReference || `#BK-${item.id.slice(0, 6)}`;
+                    const names =
+                      item.name ||
+                      (item.customerName && item.krafterName
+                        ? `${item.customerName} & ${item.krafterName}`
+                        : item.customerName || item.krafterName || "Customer & Krafter");
+                    const serviceName = item.service || item.jobTitle || "General Service";
+                    const valueDisplay =
+                      item.value != null
+                        ? String(item.value).startsWith("£") || String(item.value).startsWith("$")
+                          ? item.value
+                          : `£${item.value}`
+                        : item.amount != null
+                        ? `£${item.amount}`
+                        : item.totalPrice != null
+                        ? `£${item.totalPrice}`
+                        : "—";
+                    const statusText = item.displayStatus || item.status || "PENDING";
+                    const actionLabel =
+                      item.suggestedAction === "retry_payment"
+                        ? "Retry Payment"
+                        : item.suggestedAction === "view_details"
+                        ? "View Details"
+                        : item.action || "View Details";
+                    const isRetry =
+                      item.suggestedAction === "retry_payment" ||
+                      item.actionColor === "text-[#FF6600]";
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className={index % 2 === 0 ? "bg-[#E6E6E6]" : "bg-[#F6F6F6]"}
+                      >
+                        <td className="px-6 py-4 font-semibold text-black">{bookingCode}</td>
+                        <td className="px-6 py-4 font-medium text-black">{names}</td>
+                        <td className="px-6 py-4 text-black">{serviceName}</td>
+                        <td className="px-6 py-4 font-bold text-black">{valueDisplay}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                              statusText.toLowerCase().includes("finish") ||
+                              statusText.toLowerCase().includes("complete")
+                                ? "bg-emerald-100 text-emerald-700"
+                                : statusText.toLowerCase().includes("progress") ||
+                                  statusText.toLowerCase().includes("start")
+                                ? "bg-blue-100 text-blue-700"
+                                : statusText.toLowerCase().includes("fail") ||
+                                  statusText.toLowerCase().includes("cancel")
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {statusText}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Link
+                            href={`/admin/bookings?search=${encodeURIComponent(item.id)}`}
+                            className={`font-bold hover:underline ${
+                              isRetry ? "text-[#FF6600]" : "text-black"
+                            }`}
+                          >
+                            {actionLabel}
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {liveTotal > 0 && (
+            <div className="flex items-center justify-between border-t border-slate-100 bg-[#F8F9FA] px-6 py-3 text-[11px]">
+              <div className="font-bold text-black">
+                Showing {Math.min((livePage - 1) * 5 + 1, liveTotal)}-
+                {Math.min(livePage * 5, liveTotal)} of {liveTotal}
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setLivePage((p) => Math.max(p - 1, 1))}
+                  disabled={livePage <= 1 || isLiveLoading}
+                  className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={() => setLivePage((p) => (p < liveTotalPages ? p + 1 : p))}
+                  disabled={livePage >= liveTotalPages || isLiveLoading}
+                  className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -406,6 +696,9 @@ export default function DashboardPage() {
 
       {/* Krafter Locations Panel from incoming updates */}
       <KrafterLocationsPanel />
+
+      {/* Reusable Alert / Error Modal */}
+      <AlertModalComponent />
     </div>
   );
 }

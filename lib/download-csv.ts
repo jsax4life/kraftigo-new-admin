@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from "axios";
 import { ApiError, apiClient } from "@/lib/api-client";
 
 export function filenameFromContentDisposition(
@@ -48,9 +49,10 @@ async function parseBlobError(blob: Blob, status?: number): Promise<never> {
 
 export async function fetchCsvExport(
   path: string,
-  fallbackFilename: string
+  fallbackFilename: string,
+  config?: AxiosRequestConfig
 ): Promise<void> {
-  const res = await apiClient.get(path, { responseType: "blob" });
+  const res = await apiClient.get(path, { ...config, responseType: "blob" });
   const blob = res.data as Blob;
 
   if (blob.type.includes("json") || blob.type.includes("text/html")) {

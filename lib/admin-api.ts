@@ -65,7 +65,7 @@ function extractMeta(raw: unknown, rowCount: number): PaginatedMeta {
 }
 
 export function parsePaginatedResponse<T>(
-  itemSchema: z.ZodType<T>,
+  itemSchema: z.ZodType<T, any, any>,
   data: unknown,
   label: string
 ): PaginatedResult<T> {
@@ -86,7 +86,7 @@ export function parsePaginatedResponse<T>(
 }
 
 export function parseEntityResponse<T>(
-  itemSchema: z.ZodType<T>,
+  itemSchema: z.ZodType<T, any, any>,
   data: unknown,
   label: string
 ): T {
