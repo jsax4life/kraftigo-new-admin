@@ -345,7 +345,7 @@ export default function FinancialsPage() {
                   <button
                     key={p}
                     onClick={() => setPage(p)}
-                    className={`flex h-6 w-8 items-center justify-center rounded font-medium transition-colors ${
+                    className={`flex h-6 w-12 items-center justify-center rounded font-medium transition-colors ${
                       page === p
                         ? "bg-[#FF6600] text-white"
                         : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"

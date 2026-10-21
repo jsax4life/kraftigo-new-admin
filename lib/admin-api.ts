@@ -20,14 +20,20 @@ export function unwrapListPayload(data: unknown): unknown[] {
     if (Array.isArray(o.items)) return o.items;
     if (Array.isArray(o.results)) return o.results;
     if (Array.isArray(o.locations)) return o.locations;
+    if (Array.isArray(o.banners)) return o.banners;
+    if (Array.isArray(o.coupons)) return o.coupons;
+    if (Array.isArray(o.roles)) return o.roles;
   }
   return [];
 }
 
 export function unwrapEntityPayload(data: unknown): unknown {
-  if (data && typeof data === "object" && "data" in data) {
-    const inner = (data as { data: unknown }).data;
-    if (inner !== undefined && inner !== null) return inner;
+  if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    if (o.data !== undefined && o.data !== null && typeof o.data === "object") return o.data;
+    if (o.banner !== undefined && o.banner !== null && typeof o.banner === "object") return o.banner;
+    if (o.coupon !== undefined && o.coupon !== null && typeof o.coupon === "object") return o.coupon;
+    if (o.item !== undefined && o.item !== null && typeof o.item === "object") return o.item;
   }
   return data;
 }

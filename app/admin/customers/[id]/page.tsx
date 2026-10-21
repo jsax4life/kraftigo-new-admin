@@ -178,7 +178,6 @@ export default function CustomerDetailsPage({ params }: { params: { id: string }
               primaryButtonText="Reset Password"
               primaryButtonAction={() => setActiveModal(null)}
               primaryButtonClasses="bg-[#FF66001A] text-[#FF6600] hover:bg-[#FFE5D6]"
-              className="absolute right-0 top-14"
             />
 
             <ActionModal
@@ -190,7 +189,6 @@ export default function CustomerDetailsPage({ params }: { params: { id: string }
               primaryButtonText="Delete Account"
               primaryButtonAction={() => setActiveModal(null)}
               primaryButtonClasses="bg-[#FF3B3B1A] text-[#FF3B3B] hover:bg-[#FFD6D6]"
-              className="absolute right-0 top-14"
               countdownSeconds={5}
             />
 

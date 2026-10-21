@@ -1,4 +1,7 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ActionModalProps {
   isOpen: boolean;
@@ -31,15 +34,20 @@ export function ActionModal({
   disabledButtonClasses = "bg-[#8C8C8C] text-white cursor-not-allowed",
   titleClasses = "text-black"
 }: ActionModalProps) {
-  const [timeLeft, setTimeLeft] = React.useState(countdownSeconds);
+  const [mounted, setMounted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(countdownSeconds);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
       setTimeLeft(countdownSeconds);
     }
   }, [isOpen, countdownSeconds]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen || timeLeft <= 0) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => prev - 1);
@@ -47,7 +55,17 @@ export function ActionModal({
     return () => clearInterval(timer);
   }, [isOpen, timeLeft]);
 
-  if (!isOpen) return null;
+  // Handle ESC key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || !mounted) return null;
 
   const isButtonDisabled = timeLeft > 0;
   const currentPrimaryButtonText = isButtonDisabled 
@@ -57,36 +75,45 @@ export function ActionModal({
   const currentPrimaryButtonClasses = isButtonDisabled
     ? disabledButtonClasses
     : primaryButtonClasses;
-  if (!isOpen) return null;
-  return (
-    <>
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Backdrop */}
       {isOverlay && (
         <div
-          className="fixed inset-0 z-40 bg-black/50"
+          className="fixed inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity"
           onClick={onClose}
         />
       )}
-      <div className={`w-[400px] rounded-2xl bg-white p-3 shadow-xl border border-[#0000001A] z-50 ${className}`}>
-        <h3 className={`text-[15px] font-bold mb-3 ${titleClasses}`}>{title}</h3>
-        <p className="text-[13px] text-[#000000CC] mb-4">
+
+      {/* Modal Dialog Card */}
+      <div
+        className={`relative z-10 w-full max-w-[420px] rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-150 ${className.replace(/absolute\s+[^\s]+/g, '').replace(/absolute/g, '')}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className={`text-base font-bold mb-2 ${titleClasses}`}>{title}</h3>
+        <p className="text-xs text-slate-600 leading-relaxed mb-6">
           {description}
         </p>
         <div className="flex items-center justify-end gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg bg-[#F6F6F6] px-5 py-2.5 text-xs font-semibold text-[#000000CC] hover:bg-slate-200 transition-colors"
+            className="rounded-xl bg-slate-100 px-5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition-colors"
           >
             {cancelButtonText}
           </button>
           <button
+            type="button"
             onClick={primaryButtonAction}
             disabled={isButtonDisabled}
-            className={`rounded-lg px-4 py-2.5 text-xs font-semibold transition-colors ${currentPrimaryButtonClasses}`}
+            className={`rounded-xl px-5 py-2.5 text-xs font-semibold transition-colors shadow-sm ${currentPrimaryButtonClasses}`}
           >
             {currentPrimaryButtonText}
           </button>
         </div>
       </div>
-    </>
+    </div>,
+    document.body
   );
 }
