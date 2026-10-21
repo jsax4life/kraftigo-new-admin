@@ -73,14 +73,14 @@ export function KrafterLocationFilter({ compact = false }: KrafterLocationFilter
 
   return (
     <section
-      className={`rounded-xl border border-slate-800 bg-slate-900/60 ${
+      className={`rounded-xl border border-[#0000001A] bg-[#F6F6F6] ${
         compact ? "p-3" : "p-4"
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2
-            className={`font-medium text-slate-100 ${
+            className={`font-medium text-black ${
               compact ? "text-xs" : "text-sm"
             }`}
           >

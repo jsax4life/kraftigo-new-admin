@@ -14,6 +14,7 @@ import {
   useAdminIntentKrafters,
   useAdminKrafters
 } from "@/hooks/useAdminKrafters";
+import { useRestrictedUsersSummary } from "@/hooks/useRestrictedUsers";
 import { usersAdminService } from "@/services/users-admin.service";
 
 type KrafterTab = "all" | "intent";
@@ -73,6 +74,11 @@ export default function KraftersPageContent() {
 
   const activeQuery = tab === "intent" ? intentKrafters : krafters;
   const totalCount = activeQuery.data?.meta?.total;
+
+  const {
+    data: restrictedSummary,
+    isLoading: isRestrictedSummaryLoading
+  } = useRestrictedUsersSummary();
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8 pb-12 font-sans bg-white text-black">
@@ -216,7 +222,7 @@ export default function KraftersPageContent() {
       )}
 
       {/* Work Eligibility CTA */}
-      <Link
+      {/* <Link
         href="/admin/work-eligibility"
         className="block rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-6 transition-all hover:border-[#FF6600]/40"
       >
@@ -229,7 +235,27 @@ export default function KraftersPageContent() {
         <span className="mt-3 inline-block text-xs font-semibold text-[#FF6600]">
           Open verification queue →
         </span>
-      </Link>
+      </Link> */}
+
+
+      {/* Restricted Profiles */}
+      <div className="bg-[#F6F6F6] rounded-2xl p-6 border border-[#0000001A] flex flex-col sm:flex-row items-end justify-between gap-6 shadow-sm">
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-bold">Restricted Profiles</h2>
+          <div>
+            <p className="text-sm">View all restricted accounts</p>
+            <p className="text-sm font-bold">
+              {isRestrictedSummaryLoading
+                ? "…"
+                : `${restrictedSummary?.systemFlagged?.value ?? 0} Accounts Flagged`}
+            </p>
+          </div>
+        </div>
+        <Link href="/admin/restricted" className="rounded-lg bg-[#FF6600] px-4 py-3 text-sm font-medium text-white hover:bg-[#E65C00] transition-colors shadow-sm self-start sm:self-end text-center">
+          View Restricted List
+        </Link>
+      </div>
+
     </div>
   );
 }

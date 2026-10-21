@@ -9,7 +9,13 @@ interface RestrictAccountModalProps {
   onClose: () => void;
   user?: any;
   duration?: string;
-  onConfirm?: () => void;
+  onConfirm?: (payload: {
+    duration: string;
+    reason: string;
+    comments: string;
+    notifyUser: boolean;
+  }) => void;
+  isLoading?: boolean;
 }
 
 const REASONS = [
@@ -35,7 +41,14 @@ const REASONS = [
   }
 ];
 
-export function RestrictAccountModal({ isOpen, onClose, user, duration = "1 Month", onConfirm }: RestrictAccountModalProps) {
+export function RestrictAccountModal({
+  isOpen,
+  onClose,
+  user,
+  duration = "1 Month",
+  onConfirm,
+  isLoading = false
+}: RestrictAccountModalProps) {
   const [mounted, setMounted] = useState(false);
   const [selectedReason, setSelectedReason] = useState<string>("Multiple Policy Violations");
   const [comments, setComments] = useState("");
@@ -136,13 +149,21 @@ export function RestrictAccountModal({ isOpen, onClose, user, duration = "1 Mont
                 Cancel
               </button>
               <button
+                disabled={isLoading}
                 onClick={() => {
-                  if (onConfirm) onConfirm();
+                  if (onConfirm) {
+                    onConfirm({
+                      duration,
+                      reason: selectedReason,
+                      comments,
+                      notifyUser
+                    });
+                  }
                   onClose();
                 }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#FF6600] text-white text-[14px] font-medium hover:bg-[#E65C00] transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#FF6600] text-white text-[14px] font-medium hover:bg-[#E65C00] disabled:opacity-50 transition-colors shadow-sm"
               >
-                Apply Restriction <ShieldCheck className="h-4 w-4" />
+                {isLoading ? "Applying…" : "Apply Restriction"} <ShieldCheck className="h-4 w-4" />
               </button>
             </div>
           </div>
