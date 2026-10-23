@@ -96,7 +96,7 @@ export const staffService = {
 
   async getActivityLogs(
     id: string,
-    params?: { page?: number; limit?: number }
+    params?: { page?: number; limit?: number; activityType?: string; timeRange?: string; search?: string }
   ): Promise<PaginatedResult<StaffActivityLog>> {
     const res = await apiClient.get(`/api/admin/staff/${id}/activity-logs`, {
       params
@@ -105,6 +105,30 @@ export const staffService = {
       StaffActivityLogSchema,
       res.data,
       "staff activity logs"
+    );
+  },
+
+  async exportActivityLogs(
+    id: string,
+    params: {
+      activityType?: string;
+      search?: string;
+      timeRange?: string;
+    } = {}
+  ): Promise<void> {
+    const queryParams: Record<string, string | number> = {};
+    if (params.activityType && params.activityType !== "all") {
+      queryParams.activityType = params.activityType;
+    }
+    if (params.search && params.search.trim()) {
+      queryParams.search = params.search.trim();
+    }
+    if (params.timeRange) queryParams.timeRange = params.timeRange;
+
+    await fetchCsvExport(
+      `/api/admin/staff/${id}/activity-logs/export`,
+      `staff-${id}-activity-logs.csv`,
+      { params: queryParams }
     );
   }
 };

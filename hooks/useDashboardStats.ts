@@ -9,7 +9,8 @@ import type {
   CriticalPulseParams,
   CriticalPulseResponse,
   OverviewSummaryPeriod,
-  OverviewSummaryResponse
+  OverviewSummaryResponse,
+  OverviewVerificationQueueResponse
 } from "@/types/dashboard";
 import type { PaginatedResult } from "@/lib/admin-api";
 
@@ -43,5 +44,15 @@ export function useCriticalPulse(params?: CriticalPulseParams) {
     queryKey: ["admin", "overview", "critical-pulse", params],
     queryFn: () => dashboardService.getCriticalPulse(params),
     staleTime: 60_000
+  });
+}
+
+export function useOverviewKrafterVerificationQueue(
+  params: { page?: number; limit?: number } = {}
+) {
+  return useQuery<OverviewVerificationQueueResponse, Error>({
+    queryKey: ["admin", "overview", "krafter-verification-queue", params],
+    queryFn: () => dashboardService.getKrafterVerificationQueue(params),
+    staleTime: 15_000
   });
 }

@@ -13,6 +13,7 @@ import type {
   CustomerActivityLogsParams,
   CustomerActivityLogsResponse,
   CustomerPaymentMethodsResponse,
+  CustomerPaymentHistoryResponse,
   HighValueCustomer,
   CustomerRestrictedSummary
 } from "@/types/customers";
@@ -180,6 +181,21 @@ export function useCustomerRestrictedSummary() {
   return useQuery<CustomerRestrictedSummary, Error>({
     queryKey: ["admin", "customers", "restricted", "summary"],
     queryFn: () => customersService.getRestrictedSummary(),
+    staleTime: 30_000
+  });
+}
+
+export function useCustomerPaymentHistory(
+  id: string,
+  params: { page?: number; limit?: number } = {}
+) {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 10;
+
+  return useQuery<CustomerPaymentHistoryResponse, Error>({
+    queryKey: ["admin", "customers", "payment-history", id, { page, limit }],
+    queryFn: () => customersService.getPaymentHistory(id, params),
+    enabled: Boolean(id),
     staleTime: 30_000
   });
 }

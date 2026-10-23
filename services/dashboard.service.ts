@@ -6,13 +6,15 @@ import {
   LiveBookingRowSchema,
   CriticalPulseResponseSchema,
   OverviewSummaryResponseSchema,
+  OverviewVerificationQueueResponseSchema,
   type DashboardStats,
   type LiveBookingRow,
   type LiveBookingsParams,
   type CriticalPulseParams,
   type CriticalPulseResponse,
   type OverviewSummaryResponse,
-  type OverviewSummaryPeriod
+  type OverviewSummaryPeriod,
+  type OverviewVerificationQueueResponse
 } from "@/types/dashboard";
 
 export const dashboardService = {
@@ -44,5 +46,19 @@ export const dashboardService = {
   async getCriticalPulse(params?: CriticalPulseParams): Promise<CriticalPulseResponse> {
     const res = await apiClient.get("/api/admin/overview/critical-pulse", { params });
     return parseEntityResponse(CriticalPulseResponseSchema, res.data, "critical pulse");
+  },
+
+  async getKrafterVerificationQueue(
+    params: { page?: number; limit?: number } = {}
+  ): Promise<OverviewVerificationQueueResponse> {
+    const res = await apiClient.get(
+      "/api/admin/overview/krafter-verification-queue",
+      { params }
+    );
+    return parseEntityResponse(
+      OverviewVerificationQueueResponseSchema,
+      res.data,
+      "overview krafter verification queue"
+    );
   }
 };

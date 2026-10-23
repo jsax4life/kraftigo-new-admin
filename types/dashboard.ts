@@ -170,3 +170,8 @@ export const OverviewSummaryResponseSchema = z
 export type OverviewSummaryResponse = z.infer<
   typeof OverviewSummaryResponseSchema
 >;
+
+export {
+  KrafterVerificationQueueResponseSchema as OverviewVerificationQueueResponseSchema,
+  type KrafterVerificationQueueResponse as OverviewVerificationQueueResponse
+} from "@/types/krafters";

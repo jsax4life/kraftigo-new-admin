@@ -400,6 +400,58 @@ export type CustomerRestrictedSummary = z.infer<
   typeof CustomerRestrictedSummarySchema
 >;
 
+// Customer Payment History
+export const CustomerPaymentHistoryItemSchema = z
+  .object({
+    id: z.string().nullish(),
+    transactionId: z.string().nullish(),
+    amount: z
+      .union([
+        z.number(),
+        z.string(),
+        z.object({
+          value: z.coerce.number().default(0),
+          currency: z.string().default("GBP"),
+          formatted: z.string().nullish()
+        })
+      ])
+      .nullish(),
+    currency: z.string().default("GBP"),
+    status: z.string().nullish(),
+    type: z.string().nullish(),
+    description: z.string().nullish(),
+    date: z.string().nullish(),
+    createdAt: z.string().nullish(),
+    fee: z.union([z.number(), z.string()]).nullish(),
+    netAmount: z.union([z.number(), z.string()]).nullish(),
+    paymentMethod: z.string().nullish(),
+    cardLast4: z.string().nullish()
+  })
+  .passthrough();
+
+export type CustomerPaymentHistoryItem = z.infer<
+  typeof CustomerPaymentHistoryItemSchema
+>;
+
+export const CustomerPaymentHistoryResponseSchema = z
+  .object({
+    data: z.array(CustomerPaymentHistoryItemSchema).default([]),
+    items: z.array(CustomerPaymentHistoryItemSchema).optional(),
+    total: z.coerce.number().default(0),
+    page: z.coerce.number().default(1),
+    limit: z.coerce.number().default(10),
+    totalPages: z.coerce.number().default(1)
+  })
+  .passthrough()
+  .transform((res) => ({
+    ...res,
+    data: res.data && res.data.length > 0 ? res.data : (res.items ?? [])
+  }));
+
+export type CustomerPaymentHistoryResponse = z.infer<
+  typeof CustomerPaymentHistoryResponseSchema
+>;
+
 
 
 

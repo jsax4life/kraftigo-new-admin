@@ -9,6 +9,7 @@ import {
   CustomerPaymentMethodsResponseSchema,
   HighValueCustomersResponseSchema,
   CustomerRestrictedSummarySchema,
+  CustomerPaymentHistoryResponseSchema,
   type CustomerSummaryResponse,
   type CustomersListResponse,
   type CustomerListParams,
@@ -18,6 +19,7 @@ import {
   type CustomerActivityLogsParams,
   type CustomerActivityLogsResponse,
   type CustomerPaymentMethodsResponse,
+  type CustomerPaymentHistoryResponse,
   type HighValueCustomer,
   type CustomerRestrictedSummary
 } from "@/types/customers";
@@ -203,6 +205,21 @@ export const customersService = {
       "/api/admin/customers/export",
       "customers-export.csv",
       { params: queryParams }
+    );
+  },
+
+  async getPaymentHistory(
+    id: string,
+    params: { page?: number; limit?: number } = {}
+  ): Promise<CustomerPaymentHistoryResponse> {
+    const res = await apiClient.get(
+      `/api/admin/customers/${id}/payment-history`,
+      { params }
+    );
+    return parseEntityResponse(
+      CustomerPaymentHistoryResponseSchema,
+      res.data,
+      "customer payment history"
     );
   }
 };
