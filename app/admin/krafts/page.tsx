@@ -1,134 +1,100 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, User, Plus } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, User, Plus, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { CreateCategoryModal } from "@/components/ui/create-category-modal";
 import { SubCategoryModal } from "@/components/ui/sub-category-modal";
+import {
+  useKraftHub,
+  useTopPerformingKrafts,
+  useCustomKrafts,
+  useUpdateCategory,
+  useDeleteCategory
+} from "@/hooks/useKrafts";
+import type { CategorySubKraft, KraftCategoryItem } from "@/types/krafts";
 
-// --- Mock Data ---
-
-const topPerformingKrafts = [
+const fallbackTopPerforming = [
   {
-    id: 1,
-    title: "Electrical Wiring",
-    desc: "Installation and certification for residential and industrial smart-gr...",
-    krafters: 124,
-    // Using a generic unsplash image of wires to mimic the design
-    image: "https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=500&q=80",
+    id: "1",
+    name: "Electrical Wiring",
+    description: "Installation and certification for residential and industrial smart-gr...",
+    registeredKraftersCount: 124,
+    imageUrl: "https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=500&q=80"
   },
   {
-    id: 2,
-    title: "House Cleaning",
-    desc: "Installation and certification for residential and industrial smart-gr...",
-    krafters: 124,
-    image: "https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=500&q=80",
+    id: "2",
+    name: "House Cleaning",
+    description: "Installation and certification for residential and industrial smart-gr...",
+    registeredKraftersCount: 124,
+    imageUrl: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=500&q=80"
   },
   {
-    id: 3,
-    title: "Lawn Management",
-    desc: "Installation and certification for residential and industrial smart-gr...",
-    krafters: 124,
-    image: "https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=500&q=80",
-  },
-];
-
-const initialKraftCategories = [
-  {
-    id: "outdoor",
-    title: "Outdoor Help",
-    desc: "Includes Yard work, Lawn Care, Branch & Hedge Trimming",
-    count: 124,
-    isActive: true,
-    subItems: [
-      { id: "yard", name: "Yard work", isActive: true },
-      { id: "lawn", name: "Lawn Care", isActive: true },
-      { id: "branch", name: "Branch & Hedge Trimming", isActive: true },
-      { id: "leaf", name: "Leaf Raking & Removal", isActive: true },
-      { id: "garden", name: "Gardening & Weeding", isActive: true },
-      { id: "mulch", name: "Mulching", isActive: false },
-      { id: "mowing", name: "Lawn Mowing", isActive: false },
-    ],
-  },
-  {
-    id: "assembly",
-    title: "Assembly",
-    desc: "Includes planting, watering, weeding",
-    count: 124,
-    isActive: true,
-    subItems: [],
-  },
-  {
-    id: "mounting",
-    title: "Mounting",
-    desc: "Includes planting, watering, weeding",
-    count: 124,
-    isActive: true,
-    subItems: [],
-  },
-  {
-    id: "moving",
-    title: "Moving",
-    desc: "Includes planting, watering, weeding",
-    count: 124,
-    isActive: true,
-    subItems: [],
-  },
-  {
-    id: "cleaning",
-    title: "Cleaning",
-    desc: "Includes planting, watering, weeding",
-    count: 124,
-    isActive: true,
-    subItems: [],
-  },
-  {
-    id: "repairs",
-    title: "Home Repairs",
-    desc: "Includes planting, watering, weeding",
-    count: 124,
-    isActive: false,
-    subItems: [],
-  },
-];
-
-const customKraftsList = [
-  {
-    id: 1,
-    name: "Sarah Chen",
-    time: "2 Mins Ago",
-    desc: "Lorem ipsum is simply dummy text of the printing and typesetting industry. Lorem ipsum has been the industry's standard dummy text ever since 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-    price: "$364.00",
-    images: "5 Images",
-  },
-  {
-    id: 2,
-    name: "Sarah Chen",
-    time: "2 Mins Ago",
-    desc: "Lorem ipsum is simply dummy text of the printing and typesetting industry. Lorem ipsum has been the industry's standard dummy text ever since 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-    price: "$364.00",
-    images: "5 Images",
-  },
-  {
-    id: 3,
-    name: "Sarah Chen",
-    time: "2 Mins Ago",
-    desc: "Lorem ipsum is simply dummy text of the printing and typesetting industry. Lorem ipsum has been the industry's standard dummy text ever since 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-    price: "$364.00",
-    images: "5 Images",
-  },
+    id: "3",
+    name: "Lawn Management",
+    description: "Installation and certification for residential and industrial smart-gr...",
+    registeredKraftersCount: 124,
+    imageUrl: "https://images.unsplash.com/photo-1592417817098-8f3d6ef23961?w=500&q=80"
+  }
 ];
 
 export default function KraftManagementPage() {
-  const [categories, setCategories] = useState(initialKraftCategories);
-  const [expandedCats, setExpandedCats] = useState<string[]>(["outdoor"]);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [expandedCats, setExpandedCats] = useState<string[]>([]);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isSubCategoryModalOpen, setIsSubCategoryModalOpen] = useState(false);
+  const [subModalConfig, setSubModalConfig] = useState<{
+    isOpen: boolean;
+    categoryId?: string;
+    categoryName?: string;
+    kraft?: CategorySubKraft | null;
+  }>({
+    isOpen: false
+  });
 
+  // Custom Krafts Accordion and Tabs
   const [isCustomKraftsExpanded, setIsCustomKraftsExpanded] = useState(true);
-  const [customKraftsTab, setCustomKraftsTab] = useState("New");
+  const [customKraftsTab, setCustomKraftsTab] = useState<
+    "New" | "Under Review" | "Rejected"
+  >("New");
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Main Landing Hub Query
+  const { data: hubData, isLoading: isHubLoading } = useKraftHub(debouncedSearch);
+
+  // Dedicated Top Performing Query (GET /api/admin/kraft-management/top-performing)
+  const { data: topPerformingData } = useTopPerformingKrafts(3);
+
+
+  // Map UI tab to backend status
+  const statusParam =
+    customKraftsTab === "New"
+      ? "NEW"
+      : customKraftsTab === "Under Review"
+      ? "UNDER_REVIEW"
+      : "REJECTED";
+
+  // Custom Krafts List Query
+  const { data: customKraftsData, isLoading: isCustomLoading } = useCustomKrafts({
+    status: statusParam,
+    search: debouncedSearch
+  });
+
+  // Mutations
+  const updateCategoryMutation = useUpdateCategory();
+  const deleteCategoryMutation = useDeleteCategory();
+
+  // Accordion toggles
   const toggleAccordion = (id: string) => {
     setExpandedCats((prev) =>
       prev.includes(id) ? prev.filter((catId) => catId !== id) : [...prev, id]
@@ -140,23 +106,78 @@ export default function KraftManagementPage() {
     setActiveMenu(activeMenu === id ? null : id);
   };
 
-  const handleToggleActive = (e: React.MouseEvent, id: string) => {
+  const handleToggleActive = async (
+    e: React.MouseEvent,
+    category: KraftCategoryItem
+  ) => {
     e.stopPropagation();
-    setCategories((prev) =>
-      prev.map((cat) =>
-        cat.id === id ? { ...cat, isActive: !cat.isActive } : cat
-      )
+    try {
+      await updateCategoryMutation.mutateAsync({
+        categoryId: category.id,
+        dto: { isActive: !category.isActive }
+      });
+    } catch (err) {
+      console.error("Failed to toggle category active status:", err);
+    }
+  };
+
+  const handleRename = async (
+    e: React.MouseEvent,
+    category: KraftCategoryItem
+  ) => {
+    e.stopPropagation();
+    setActiveMenu(null);
+    const newName = window.prompt("Enter new category name:", category.name);
+    if (!newName || !newName.trim() || newName.trim() === category.name) return;
+
+    try {
+      await updateCategoryMutation.mutateAsync({
+        categoryId: category.id,
+        dto: { name: newName.trim() }
+      });
+    } catch (err) {
+      console.error("Failed to rename category:", err);
+    }
+  };
+
+  const handleRemove = async (
+    e: React.MouseEvent,
+    category: KraftCategoryItem
+  ) => {
+    e.stopPropagation();
+    setActiveMenu(null);
+    const confirmed = window.confirm(
+      `Are you sure you want to remove category "${category.name}"?`
     );
-    // Keep menu open to match interaction, or close it if preferred
-    // setActiveMenu(null);
+    if (!confirmed) return;
+
+    try {
+      await deleteCategoryMutation.mutateAsync(category.id);
+    } catch (err) {
+      console.error("Failed to remove category:", err);
+    }
   };
 
   // Close menus when clicking outside
-  React.useEffect(() => {
+  useEffect(() => {
     const closeMenu = () => setActiveMenu(null);
     window.addEventListener("click", closeMenu);
     return () => window.removeEventListener("click", closeMenu);
   }, []);
+
+  // Compute top performing list (prioritize dedicated endpoint, then hub, then fallback)
+  const topPerforming =
+    topPerformingData && topPerformingData.length > 0
+      ? topPerformingData
+      : hubData?.topPerforming && hubData.topPerforming.length > 0
+      ? hubData.topPerforming
+      : fallbackTopPerforming;
+
+  // Categories list
+  const categories = hubData?.categories?.categories ?? [];
+  const customKraftsEntry = hubData?.categories?.customKraftsEntry;
+  const customTabsCounts = hubData?.customKrafts?.tabs;
+  const customKraftsList = customKraftsData?.data ?? [];
 
   return (
     <div className="w-full max-w-5xl space-y-12 pb-16 font-sans text-black">
@@ -166,7 +187,7 @@ export default function KraftManagementPage() {
           <h1 className="text-3xl font-garet font-[850]">Kraft Management</h1>
           <p className="mt-2 text-[13px] font-medium leading-relaxed">
             To build a comprehensive admin dashboard for Kraftigo, the interface needs to bridge the gap
-            between high-level business health and granular operational control
+            between high-level business health and granular operational control.
           </p>
         </div>
         <button
@@ -181,26 +202,43 @@ export default function KraftManagementPage() {
       <section className="space-y-6">
         <h2 className="text-[17px] font-garet font-bold">Top performing Kraft</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {topPerformingKrafts.map((kraft) => (
-            <div key={kraft.id} className="flex flex-col gap-3 group cursor-pointer">
-              <div className="relative h-48 w-full overflow-hidden rounded-xl border border-[#0000001A]">
-                <img
-                  src={kraft.image}
-                  alt={kraft.title}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
-              <div>
-                <h3 className="font-bold text-[14px]">{kraft.title}</h3>
-                <p className="text-[#45464D] text-[13px] mt-1 line-clamp-2 pr-4 leading-relaxed">
-                  {kraft.desc}
-                </p>
-                <div className="mt-1 text-[#FF6600] text-[13px]">
-                  {kraft.krafters} registered Krafters
+          {isHubLoading && !hubData
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-3 rounded-xl border border-slate-100 p-3 bg-slate-50 animate-pulse"
+                >
+                  <div className="h-44 w-full rounded-lg bg-slate-200" />
+                  <div className="h-4 w-32 bg-slate-200 rounded" />
+                  <div className="h-3 w-48 bg-slate-200 rounded" />
                 </div>
-              </div>
-            </div>
-          ))}
+              ))
+            : topPerforming.map((kraft) => (
+                <div
+                  key={kraft.id}
+                  className="flex flex-col gap-3 group cursor-pointer"
+                >
+                  <div className="relative h-48 w-full overflow-hidden rounded-xl border border-[#0000001A]">
+                    <img
+                      src={
+                        kraft.imageUrl ||
+                        "https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=500&q=80"
+                      }
+                      alt={kraft.name}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[14px]">{kraft.name}</h3>
+                    <p className="text-[#45464D] text-[13px] mt-1 line-clamp-2 pr-4 leading-relaxed">
+                      {kraft.description || "Top rated platform Kraft category."}
+                    </p>
+                    <div className="mt-1 text-[#FF6600] text-[13px] font-semibold">
+                      {kraft.registeredKraftersCount ?? 0} registered Krafters
+                    </div>
+                  </div>
+                </div>
+              ))}
         </div>
       </section>
 
@@ -212,7 +250,9 @@ export default function KraftManagementPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#00000066]" />
             <input
               type="text"
-              placeholder="Search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search category name or description"
               className="w-full rounded-lg border-none bg-[#F6F6F6] py-2.5 pl-10 pr-4 text-sm outline-none placeholder:text-[#00000066] focus:ring-2 focus:ring-[#FF6600]/20"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#00000066]">
@@ -229,14 +269,19 @@ export default function KraftManagementPage() {
               onClick={() => setIsCustomKraftsExpanded(!isCustomKraftsExpanded)}
             >
               <div>
-                <h3 className="font-bold text-[14px]">Custom Krafts</h3>
-                <p className="text-[12px] font-medium mt-0.5">
-                  See all custom Krafts on the platform
+                <h3 className="font-bold text-[14px]">
+                  {customKraftsEntry?.title || "Custom Krafts"}
+                </h3>
+                <p className="text-[12px] font-medium mt-0.5 text-slate-700">
+                  {customKraftsEntry?.description ||
+                    "See all custom Krafts on the platform"}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800">
                 <User className="h-4 w-4" />
-                11124
+                {customKraftsEntry?.totalCount ??
+                  hubData?.customKrafts?.totalPublished ??
+                  0}
               </div>
             </div>
 
@@ -244,175 +289,317 @@ export default function KraftManagementPage() {
               <div className="flex flex-col px-4 pb-4">
                 {/* Tabs */}
                 <div className="flex items-center gap-2 mb-2">
-                  {["New", "Under Review", "Rejected"].map((tab) => (
+                  {(
+                    [
+                      { label: "New", count: customTabsCounts?.new ?? 0 },
+                      {
+                        label: "Under Review",
+                        count: customTabsCounts?.underReview ?? 0
+                      },
+                      {
+                        label: "Rejected",
+                        count: customTabsCounts?.rejected ?? 0
+                      }
+                    ] as const
+                  ).map((tab) => (
                     <button
-                      key={tab}
-                      onClick={() => setCustomKraftsTab(tab)}
-                      className={`px-3 py-2 rounded-full text-[12px] font-semibold transition-colors ${customKraftsTab === tab
-                        ? "bg-[#FF6600] text-white"
-                        : "bg-white text-slate-600 border border-[#0000001A] hover:bg-slate-50"
-                        }`}
+                      key={tab.label}
+                      onClick={() => setCustomKraftsTab(tab.label)}
+                      className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors flex items-center gap-1.5 ${
+                        customKraftsTab === tab.label
+                          ? "bg-[#FF6600] text-white"
+                          : "bg-white text-slate-600 border border-[#0000001A] hover:bg-slate-50"
+                      }`}
                     >
-                      {tab}
+                      <span>{tab.label}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          customKraftsTab === tab.label
+                            ? "bg-white/20 text-white"
+                            : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
                     </button>
                   ))}
                 </div>
 
                 {/* List Items */}
                 <div className="flex flex-col">
-                  {customKraftsList.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className={`flex flex-col sm:flex-row gap-3 py-6 ${index !== customKraftsList.length - 1 ? "border-b border-[#0000001A]" : ""
-                        }`}
-                    >
-                      {/* Left: Avatar & Info */}
-                      <div className="flex items-start gap-3 w-[150px] shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-[#D9D9D9] shrink-0" />
-                        <div className="flex flex-col pt-0.5">
-                          <span className="text-[13px] font-bold">{item.name}</span>
-                          <span className="text-[11px] font-medium mt-0.5">{item.time}</span>
-                        </div>
-                      </div>
-
-                      {/* Middle: Description */}
-                      <div className="flex-1 pr-4">
-                        <p className="text-[12px] leading-relaxed">
-                          {item.desc}
-                        </p>
-                      </div>
-
-                      {/* Right: Price & View */}
-                      <div className="flex items-start justify-between shrink-0 gap-10">
-                        <div className="text-left">
-                          <span className="text-[13px] font-bold block">{item.price}</span>
-                          <span className="text-[12px] text-slate-500 block">{item.images}</span>
-                        </div>
-                        <button className="text-[#FF6600] text-[12px] font-bold hover:underline mb-1">
-                          View
-                        </button>
-                      </div>
+                  {isCustomLoading ? (
+                    <div className="py-8 text-center text-xs text-slate-500">
+                      Loading custom krafts…
                     </div>
-                  ))}
+                  ) : customKraftsList.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-500">
+                      No custom Krafts in the {customKraftsTab.toLowerCase()} queue.
+                    </div>
+                  ) : (
+                    customKraftsList.map((item, index) => {
+                      const customerName =
+                        item.customer?.name || item.customerName || "Customer";
+                      const customerAvatar =
+                        item.customer?.avatarUrl ||
+                        item.customerAvatarUrl ||
+                        "/images/login.jpg";
+                      const timeStr = item.createdAt
+                        ? new Date(item.createdAt).toLocaleDateString()
+                        : "Recent";
+                      const photosCount = item.photos?.length || 0;
+
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex flex-col sm:flex-row gap-3 py-4 ${
+                            index !== customKraftsList.length - 1
+                              ? "border-b border-[#0000001A]"
+                              : ""
+                          }`}
+                        >
+                          {/* Left: Avatar & Info */}
+                          <div className="flex items-start gap-3 w-[150px] shrink-0">
+                            <Image
+                              src={customerAvatar}
+                              alt={customerName}
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 rounded-full object-cover bg-[#D9D9D9] shrink-0"
+                            />
+                            <div className="flex flex-col pt-0.5">
+                              <span className="text-[13px] font-bold">
+                                {customerName}
+                              </span>
+                              <span className="text-[11px] font-medium text-slate-500 mt-0.5">
+                                {timeStr}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Middle: Description */}
+                          <div className="flex-1 pr-4">
+                            <p className="text-[12px] leading-relaxed line-clamp-3 text-slate-800">
+                              {item.description}
+                            </p>
+                          </div>
+
+                          {/* Right: Price & View */}
+                          <div className="flex items-start justify-between shrink-0 gap-6">
+                            <div className="text-left">
+                              <span className="text-[13px] font-bold block">
+                                {item.offerAmount != null
+                                  ? `£${item.offerAmount.toLocaleString()}`
+                                  : "Flexible"}
+                              </span>
+                              <span className="text-[11px] text-slate-500 block">
+                                {photosCount > 0 ? `${photosCount} Images` : "No photos"}
+                              </span>
+                            </div>
+                            <span className="text-[#FF6600] text-[12px] font-bold hover:underline cursor-pointer">
+                              View
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Accordions */}
-          {categories.map((cat) => {
-            const isExpanded = expandedCats.includes(cat.id);
-            // Different background based on Active state to match design
-            const bgClass = cat.isActive ? "bg-[#F6F6F6]" : "bg-[#B9B9B9] text-[#00000099]";
-            const textColorClass = cat.isActive ? "text-black" : "text-[#00000099]";
+          {/* Categories Accordions */}
+          {isHubLoading && categories.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500">
+              Loading categories…
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500">
+              No categories match your search.
+            </div>
+          ) : (
+            categories.map((cat) => {
+              const isExpanded = expandedCats.includes(cat.id);
+              const bgClass = cat.isActive
+                ? "bg-[#F6F6F6]"
+                : "bg-[#B9B9B9] text-[#00000099]";
+              const textColorClass = cat.isActive
+                ? "text-black"
+                : "text-[#00000099]";
 
-            return (
-              <div
-                key={cat.id}
-                className={`flex flex-col rounded-xl border border-[#0000001A] overflow-visible transition-colors ${bgClass}`}
-              >
-                {/* Accordion Header */}
+              return (
                 <div
-                  className="flex items-center justify-between p-4 cursor-pointer select-none"
-                  onClick={() => toggleAccordion(cat.id)}
+                  key={cat.id}
+                  className={`flex flex-col rounded-xl border border-[#0000001A] overflow-visible transition-colors ${bgClass}`}
                 >
-                  <div className="pr-4">
-                    <h3 className={`font-bold text-[14px] ${textColorClass}`}>
-                      {cat.title}
-                    </h3>
-                    <p className={`text-[12px] font-medium mt-0.5 ${cat.isActive ? 'text-black' : 'text-[#00000066]'}`}>
-                      {cat.desc}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4 relative">
-                    <div className={`flex items-center gap-1.5 text-[13px] font-bold ${textColorClass}`}>
-                      <User className="h-4 w-4" />
-                      {cat.count}
-                    </div>
-                    <button
-                      onClick={(e) => toggleMenu(e, cat.id)}
-                      className="p-1 hover:bg-[#0000001A] rounded-md transition-colors"
-                    >
-                      <Image src="/menu.svg" alt="menu" width={18} height={18} className={cat.isActive ? "black" : "#00000066"} />
-                    </button>
-
-                    {/* Dropdown Menu */}
-                    {activeMenu === cat.id && (
-                      <div
-                        className="absolute right-0 top-10 z-20 w-40 rounded-lg bg-[#F6F6F6] border border-[#0000001A] shadow-lg overflow-hidden flex flex-col text-[12px] font-semibold text-slate-700"
-                        onClick={(e) => e.stopPropagation()} // Prevent clicking inside menu from closing or toggling accordion
+                  {/* Accordion Header */}
+                  <div
+                    className="flex items-center justify-between p-4 cursor-pointer select-none"
+                    onClick={() => toggleAccordion(cat.id)}
+                  >
+                    <div className="pr-4">
+                      <h3 className={`font-bold text-[14px] ${textColorClass}`}>
+                        {cat.name}
+                      </h3>
+                      <p
+                        className={`text-[12px] font-medium mt-0.5 ${
+                          cat.isActive ? "text-slate-700" : "text-[#00000066]"
+                        }`}
                       >
-                        <div className="flex items-center justify-between px-4 py-1.5 border-b border-[#0000000D]">
-                          <span>Active</span>
-                          <button
-                            onClick={(e) => handleToggleActive(e, cat.id)}
-                            className={`relative inline-flex h-[20px] w-[36px] items-center rounded-full transition-colors ${cat.isActive ? "bg-[#B34700]" : "bg-slate-300"
+                        {cat.description || "Platform service category"}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4 relative">
+                      <div
+                        className={`flex items-center gap-1.5 text-[13px] font-bold ${textColorClass}`}
+                      >
+                        <User className="h-4 w-4" />
+                        {cat.registeredKraftersCount ?? 0}
+                      </div>
+                      <button
+                        onClick={(e) => toggleMenu(e, cat.id)}
+                        className="p-1 hover:bg-[#0000001A] rounded-md transition-colors"
+                      >
+                        <Image
+                          src="/menu.svg"
+                          alt="menu"
+                          width={18}
+                          height={18}
+                          className={cat.isActive ? "black" : "#00000066"}
+                        />
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {activeMenu === cat.id && (
+                        <div
+                          className="absolute right-0 top-10 z-20 w-40 rounded-lg bg-[#F6F6F6] border border-[#0000001A] shadow-lg overflow-hidden flex flex-col text-[12px] font-semibold text-slate-700"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between px-4 py-2 border-b border-[#0000000D]">
+                            <span>Active</span>
+                            <button
+                              onClick={(e) => handleToggleActive(e, cat)}
+                              className={`relative inline-flex h-[20px] w-[36px] items-center rounded-full transition-colors ${
+                                cat.isActive ? "bg-[#B34700]" : "bg-slate-300"
                               }`}
-                          >
-                            <span
-                              className={`inline-block h-[16px] w-[16px] transform rounded-full bg-white transition-transform ${cat.isActive ? "translate-x-[18px]" : "translate-x-[2px]"
+                            >
+                              <span
+                                className={`inline-block h-[16px] w-[16px] transform rounded-full bg-white transition-transform ${
+                                  cat.isActive
+                                    ? "translate-x-[18px]"
+                                    : "translate-x-[2px]"
                                 }`}
-                            />
+                              />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setActiveMenu(null);
+                              toggleAccordion(cat.id);
+                            }}
+                            className="px-4 py-2 text-left hover:bg-slate-50 border-b border-[#0000000D]"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={(e) => handleRename(e, cat)}
+                            className="px-4 py-2 text-left hover:bg-slate-50 border-b border-[#0000000D]"
+                          >
+                            Rename
+                          </button>
+                          <button
+                            onClick={(e) => handleRemove(e, cat)}
+                            className="px-4 py-2 text-left hover:bg-slate-50 text-[#C80A0A]"
+                          >
+                            Remove
                           </button>
                         </div>
-                        <button className="px-4 py-1.5 text-left hover:bg-slate-50 border-b border-[#0000000D]">
-                          View
-                        </button>
-                        <button className="px-4 py-1.5 text-left hover:bg-slate-50 border-b border-[#0000000D]">
-                          Rename
-                        </button>
-                        <button className="px-4 py-1.5 text-left hover:bg-slate-50 text-[#C80A0A]">
-                          Remove
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Accordion Body (Sub-items) */}
-                {isExpanded && cat.subItems.length > 0 && (
-                  <div className="px-4 pb-4 space-y-2">
-                    {cat.subItems.map((subItem) => (
-                      <div
-                        key={subItem.id}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-[13px] border border-transparent ${subItem.isActive
-                          ? "bg-[#FF66001A] "
-                          : "bg-[#91919199] text-[#00000066]"
-                          }`}
-                      >
-                        <div
-                          className={`h-1 w-1 rounded-full ${subItem.isActive ? "bg-[#FF6600]" : "bg-[#00000066]"
+                  {/* Accordion Body (Sub-items) */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 space-y-2">
+                      {cat.krafts && cat.krafts.length > 0 ? (
+                        cat.krafts.map((subItem) => (
+                          <div
+                            key={subItem.id}
+                            onClick={() =>
+                              setSubModalConfig({
+                                isOpen: true,
+                                categoryId: cat.id,
+                                categoryName: cat.name,
+                                kraft: subItem
+                              })
+                            }
+                            className={`flex items-center justify-between px-4 py-3 rounded-lg text-[13px] cursor-pointer transition-colors ${
+                              subItem.isActive
+                                ? "bg-[#FF66001A] hover:bg-[#FF660026]"
+                                : "bg-[#91919199] text-[#00000066]"
                             }`}
-                        />
-                        {subItem.name}
-                      </div>
-                    ))}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  subItem.isActive
+                                    ? "bg-[#FF6600]"
+                                    : "bg-[#00000066]"
+                                }`}
+                              />
+                              <span className="font-semibold text-black">
+                                {subItem.name}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-500 font-medium">
+                              {subItem.registeredKraftersCount ?? 0} Krafters
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-2 text-xs text-slate-500">
+                          No sub-Krafts added to this category yet.
+                        </div>
+                      )}
 
-                    {/* Add New Button */}
-                    <button 
-                      onClick={() => setIsSubCategoryModalOpen(true)}
-                      className="flex items-center gap-2 px-4 py-3 w-full rounded-lg text-[13px] font-semibold bg-[#FFF0E5] text-slate-800 hover:bg-[#FFE5D6] transition-colors border border-transparent border-dashed hover:border-[#FF6600]"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add new
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                      {/* Add New Sub-Kraft Button */}
+                      <button
+                        onClick={() =>
+                          setSubModalConfig({
+                            isOpen: true,
+                            categoryId: cat.id,
+                            categoryName: cat.name,
+                            kraft: null
+                          })
+                        }
+                        className="flex items-center gap-2 px-4 py-3 w-full rounded-lg text-[13px] font-semibold bg-[#FFF0E5] text-slate-800 hover:bg-[#FFE5D6] transition-colors border border-transparent border-dashed hover:border-[#FF6600]"
+                      >
+                        <Plus className="h-4 w-4 text-[#FF6600]" />
+                        Add new
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </section>
 
+      {/* Create Category Modal */}
       <CreateCategoryModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
 
-      <SubCategoryModal 
-        isOpen={isSubCategoryModalOpen}
-        onClose={() => setIsSubCategoryModalOpen(false)}
+      {/* Sub-Kraft Create / Detail Modal */}
+      <SubCategoryModal
+        isOpen={subModalConfig.isOpen}
+        onClose={() => setSubModalConfig({ isOpen: false })}
+        categoryId={subModalConfig.categoryId}
+        categoryName={subModalConfig.categoryName}
+        kraft={subModalConfig.kraft}
       />
     </div>
   );

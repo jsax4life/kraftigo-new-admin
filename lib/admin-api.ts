@@ -30,10 +30,18 @@ export function unwrapListPayload(data: unknown): unknown[] {
 export function unwrapEntityPayload(data: unknown): unknown {
   if (data && typeof data === "object") {
     const o = data as Record<string, unknown>;
-    if (o.data !== undefined && o.data !== null && typeof o.data === "object") return o.data;
-    if (o.banner !== undefined && o.banner !== null && typeof o.banner === "object") return o.banner;
-    if (o.coupon !== undefined && o.coupon !== null && typeof o.coupon === "object") return o.coupon;
-    if (o.item !== undefined && o.item !== null && typeof o.item === "object") return o.item;
+    if (o.data !== undefined && o.data !== null && typeof o.data === "object" && !Array.isArray(o.data)) {
+      return o.data;
+    }
+    if (o.banner !== undefined && o.banner !== null && typeof o.banner === "object" && !Array.isArray(o.banner)) {
+      return o.banner;
+    }
+    if (o.coupon !== undefined && o.coupon !== null && typeof o.coupon === "object" && !Array.isArray(o.coupon)) {
+      return o.coupon;
+    }
+    if (o.item !== undefined && o.item !== null && typeof o.item === "object" && !Array.isArray(o.item)) {
+      return o.item;
+    }
   }
   return data;
 }
