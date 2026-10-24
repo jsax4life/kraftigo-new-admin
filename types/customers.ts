@@ -99,10 +99,10 @@ export const CustomerSummaryResponseSchema = z
       .object({
         flaggedCount: z.coerce.number().default(0),
         definition: z.string().nullish(),
-        listPath: z.string().default("/admin/restricted-users")
+        listPath: z.string().default("/admin/restricted")
       })
       .passthrough()
-      .default({ flaggedCount: 0, listPath: "/admin/restricted-users" })
+      .default({ flaggedCount: 0, listPath: "/admin/restricted" })
   })
   .passthrough();
 
@@ -392,7 +392,7 @@ export const CustomerRestrictedSummarySchema = z
   .object({
     flaggedCount: z.coerce.number().default(0),
     definition: z.string().nullish(),
-    listPath: z.string().default("/admin/restricted-users")
+    listPath: z.string().default("/admin/restricted")
   })
   .passthrough();
 

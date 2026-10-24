@@ -510,11 +510,7 @@ export default function KraftersPageContent() {
           </div>
         </div>
         <Link
-          href={
-            restrictedSummary?.listPath ||
-            summaryData?.restrictedProfiles?.listPath ||
-            "/admin/restricted-users"
-          }
+          href="/admin/restricted"
           className="rounded-lg bg-[#FF6600] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#e65c00] transition-colors"
         >
           View Restricted List
