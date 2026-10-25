@@ -9,9 +9,12 @@ import {
   Clock,
   ArrowUpRight,
   TrendingUp,
-  Receipt
+  Receipt,
+  Eye
 } from "lucide-react";
 import { useFinancialsSummary, usePayouts } from "@/hooks/useFinancials";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { PayoutDetailModal } from "@/components/ui/payout-detail-modal";
 import type { FinancialsPeriod, PayoutStatus, PayoutRow } from "@/types/financials";
 
 const STATUS_TABS: { label: string; value: PayoutStatus | "ALL" }[] = [
@@ -47,6 +50,7 @@ export default function FinancialsPage() {
   const [period, setPeriod] = useState<FinancialsPeriod>("this_month");
   const [statusFilter, setStatusFilter] = useState<PayoutStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
+  const [selectedPayout, setSelectedPayout] = useState<PayoutRow | null>(null);
 
   // Queries
   const {
@@ -234,25 +238,26 @@ export default function FinancialsPage() {
                   <th className="px-6 py-4 font-medium">Amount</th>
                   <th className="px-6 py-4 font-medium">Destination</th>
                   <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium text-right">Date</th>
+                  <th className="px-6 py-4 font-medium">Date</th>
+                  <th className="px-6 py-4 font-medium text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#0000000D]">
                 {isPayoutsLoading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-xs text-slate-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-xs text-slate-500">
                       Loading payout ledger…
                     </td>
                   </tr>
                 ) : isPayoutsError ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-xs text-rose-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-xs text-rose-500">
                       Failed to load payouts: {payoutsError?.message ?? "Unknown error"}
                     </td>
                   </tr>
                 ) : payouts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-xs text-slate-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-xs text-slate-500">
                       No payout entries found for status{" "}
                       <span className="font-semibold text-slate-800">
                         {statusFilter}
@@ -287,7 +292,8 @@ export default function FinancialsPage() {
                     return (
                       <tr
                         key={row.id}
-                        className={`hover:bg-slate-50 transition-colors ${
+                        onClick={() => setSelectedPayout(row)}
+                        className={`hover:bg-slate-100/70 cursor-pointer transition-colors ${
                           index % 2 === 0 ? "bg-[#DFDFDF]/40" : "bg-[#F6F6F6]"
                         }`}
                       >
@@ -315,8 +321,20 @@ export default function FinancialsPage() {
                             {statusText}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right text-xs text-slate-500">
+                        <td className="px-6 py-4 text-xs text-slate-500">
                           {dateDisplay}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPayout(row);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg bg-white border border-[#0000001A] px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-black hover:border-slate-400 transition-colors"
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span>View</span>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -327,45 +345,23 @@ export default function FinancialsPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between border-t border-[#0000001A] px-6 py-3 text-[11px]">
-            <div className="font-bold text-black text-[12px]">
-              Showing {payouts.length === 0 ? 0 : (page - 1) * 20 + 1}-{Math.min(page * 20, total)} of {total}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const p = i + 1;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`flex h-6 w-12 items-center justify-center rounded font-medium transition-colors ${
-                      page === p
-                        ? "bg-[#FF6600] text-white"
-                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={20}
+            onPageChange={setPage}
+            isLoading={isPayoutsLoading}
+          />
         </div>
       </div>
+
+      {/* Payout Details Modal */}
+      <PayoutDetailModal
+        payout={selectedPayout}
+        isOpen={!!selectedPayout}
+        onClose={() => setSelectedPayout(null)}
+      />
     </div>
   );
 }

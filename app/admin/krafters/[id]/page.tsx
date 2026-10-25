@@ -17,10 +17,12 @@ import {
   Trash2,
   KeyRound,
   ShieldAlert,
-  Check
+  Check,
+  Database
 } from "lucide-react";
 import { ActionModal } from "@/components/ui/action-modal";
 import { RestrictAccountModal } from "@/components/ui/restrict-account-modal";
+import { KrafterPaymentHistoryModal } from "@/components/ui/krafter-payment-history-modal";
 import {
   useKrafterDetail,
   usePatchKrafter,
@@ -28,7 +30,8 @@ import {
   useRestrictKrafter,
   useLiftKrafterRestriction,
   useKrafterActivityLogs,
-  useKrafterPaymentMethods
+  useKrafterPaymentMethods,
+  useMoveKrafterAccountData
 } from "@/hooks/useKrafters";
 import { kraftersService } from "@/services/krafters.service";
 
@@ -53,6 +56,9 @@ export default function KrafterDetailsPage(props: PageProps) {
   const sendPasswordResetMutation = useSendKrafterPasswordReset();
   const restrictMutation = useRestrictKrafter();
   const liftRestrictionMutation = useLiftKrafterRestriction();
+  const moveAccountDataMutation = useMoveKrafterAccountData();
+
+  const [isPaymentHistoryOpen, setIsPaymentHistoryOpen] = useState(false);
 
   // Activity Logs state
   const [activityPage, setActivityPage] = useState(1);
@@ -175,6 +181,16 @@ export default function KrafterDetailsPage(props: PageProps) {
       showSuccessNotice("Account restriction lifted.");
     } catch (err) {
       console.error("Failed to lift restriction:", err);
+    }
+  };
+
+  const handleMoveAccountData = async () => {
+    try {
+      await moveAccountDataMutation.mutateAsync(krafterId);
+      showSuccessNotice("Account data migration requested successfully.");
+      setActiveDropdown(null);
+    } catch (err: any) {
+      showErrorNotice(err?.message || "Failed to move account data.");
     }
   };
 
@@ -365,6 +381,14 @@ export default function KrafterDetailsPage(props: PageProps) {
                 className="absolute right-0 top-12 w-48 rounded-lg border border-slate-200 bg-white shadow-xl overflow-hidden z-20 text-[13px] font-medium text-slate-800"
                 onClick={(e) => e.stopPropagation()}
               >
+                <button
+                  onClick={handleMoveAccountData}
+                  disabled={moveAccountDataMutation.isPending}
+                  className="w-full px-4 py-2.5 text-left hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100 disabled:opacity-50"
+                >
+                  <Database className="h-4 w-4 text-slate-500" />
+                  {moveAccountDataMutation.isPending ? "Moving Data…" : "Move Account Data"}
+                </button>
                 <button
                   onClick={() => {
                     setActiveModal("reset");
@@ -687,7 +711,7 @@ export default function KrafterDetailsPage(props: PageProps) {
       </div>
 
       {/* Payment Methods Card */}
-      <div className="bg-[#F6F6F6] rounded-2xl p-6 border border-[#0000001A] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="bg-[#F6F6F6] rounded-2xl p-6 border border-[#0000001A] flex flex-col sm:flex-row sm:items-start justify-between gap-6">
         <div className="flex flex-col gap-3">
           <h2 className="text-lg font-garet font-bold text-slate-900">Saved Payout Methods</h2>
           <div className="flex flex-col gap-2">
@@ -710,6 +734,12 @@ export default function KrafterDetailsPage(props: PageProps) {
             )}
           </div>
         </div>
+        <button
+          onClick={() => setIsPaymentHistoryOpen(true)}
+          className="rounded-lg bg-white border border-[#0000001A] px-3.5 py-2 text-xs font-semibold text-slate-800 hover:text-black hover:border-slate-400 transition-colors shrink-0 self-start sm:self-center shadow-sm"
+        >
+          View Payout History
+        </button>
       </div>
 
       {/* Activity Logs Section */}
@@ -862,6 +892,14 @@ export default function KrafterDetailsPage(props: PageProps) {
             showErrorNotice(err?.message || "Failed to restrict account.");
           }
         }}
+      />
+
+      {/* Krafter Payment History Modal */}
+      <KrafterPaymentHistoryModal
+        isOpen={isPaymentHistoryOpen}
+        onClose={() => setIsPaymentHistoryOpen(false)}
+        krafterId={krafterId}
+        krafterName={header.displayName || header.name}
       />
     </div>
   );

@@ -23,6 +23,8 @@ import { useRouter } from "next/navigation";
 import { ActionModal } from "@/components/ui/action-modal";
 import { RestrictAccountModal } from "@/components/ui/restrict-account-modal";
 import { BookingHistoryModal } from "@/components/ui/booking-history-modal";
+import { PaymentHistoryModal } from "@/components/ui/payment-history-modal";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import { useAlertModal } from "@/components/ui/alert-modal";
 import {
   useCustomerDetail,
@@ -74,6 +76,7 @@ export default function CustomerDetailsPage({
   const [activeModal, setActiveModal] = useState<"reset" | "delete" | null>(null);
   const [isRestrictModalOpen, setIsRestrictModalOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isPaymentHistoryModalOpen, setIsPaymentHistoryModalOpen] = useState(false);
 
   // Editable Form Fields
   const [isEditing, setIsEditing] = useState(false);
@@ -207,6 +210,23 @@ export default function CustomerDetailsPage({
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to delete account";
       showAlert({ title: "Delete Failed", message: msg, type: "error" });
+    }
+  };
+
+  const handleMoveAccountData = async () => {
+    try {
+      await customersService.moveAccountData(customerId);
+      showAlert({
+        title: "Account Data Moved",
+        message: "Customer account data has been successfully moved.",
+        type: "success"
+      });
+    } catch (err: any) {
+      showAlert({
+        title: "Move Account Data",
+        message: err?.message || "Move account data feature is not yet supported by the server.",
+        type: "info"
+      });
     }
   };
 
@@ -446,6 +466,16 @@ export default function CustomerDetailsPage({
                   </button>
                   <button
                     onClick={() => {
+                      setActiveDropdown(null);
+                      handleMoveAccountData();
+                    }}
+                    className="flex items-center gap-2 px-4 py-3 text-left border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                  >
+                    <Info className="w-3.5 h-3.5 text-slate-500" />
+                    Move Account Data
+                  </button>
+                  <button
+                    onClick={() => {
                       setActiveModal("delete");
                       setActiveDropdown(null);
                     }}
@@ -672,14 +702,12 @@ export default function CustomerDetailsPage({
             </div>
           )}
         </div>
-        {(paymentMethodsData?.paymentHistoryPath || stats?.paymentsAdminPath) && (
-          <Link
-            href={paymentMethodsData?.paymentHistoryPath || stats?.paymentsAdminPath || "#"}
-            className="rounded-lg bg-black px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-sm"
-          >
-            View payment history
-          </Link>
-        )}
+        <button
+          onClick={() => setIsPaymentHistoryModalOpen(true)}
+          className="rounded-lg bg-black px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-sm"
+        >
+          View payment history
+        </button>
       </div>
 
       {/* Activity Logs Card (Connected to /api/admin/customers/{id}/activity-logs) */}
@@ -775,46 +803,14 @@ export default function CustomerDetailsPage({
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between border-t border-slate-100 bg-[#F8F9FA] px-6 py-3 text-[11px]">
-              <div className="font-bold text-black">
-                Showing {logs.length === 0 ? 0 : (logPage - 1) * 10 + 1}-
-                {Math.min(logPage * 10, logTotalCount)} of {logTotalCount}
-              </div>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, logTotalPages) }).map((_, idx) => {
-                  const pageNum = idx + 1;
-                  const isActive = logPage === pageNum;
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setLogPage(pageNum)}
-                      disabled={isActivityLogsFetching}
-                      className={`flex h-6 w-8 sm:w-12 items-center justify-center rounded font-medium transition-colors ${
-                        isActive
-                          ? "bg-[#FF6600] text-white"
-                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-                <button
-                  onClick={() => setLogPage((p) => Math.max(p - 1, 1))}
-                  disabled={logPage <= 1 || isActivityLogsFetching}
-                  className="flex h-6 w-8 sm:w-12 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-                >
-                  <ChevronLeft className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={() => setLogPage((p) => (p < logTotalPages ? p + 1 : p))}
-                  disabled={logPage >= logTotalPages || isActivityLogsFetching}
-                  className="flex h-6 w-8 sm:w-12 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-                >
-                  <ChevronRight className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
+            <PaginationBar
+              page={logPage}
+              totalPages={logTotalPages}
+              total={logTotalCount}
+              pageSize={10}
+              onPageChange={setLogPage}
+              isLoading={isActivityLogsFetching}
+            />
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-16">
@@ -882,6 +878,13 @@ export default function CustomerDetailsPage({
       <BookingHistoryModal
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
+      />
+
+      <PaymentHistoryModal
+        isOpen={isPaymentHistoryModalOpen}
+        onClose={() => setIsPaymentHistoryModalOpen(false)}
+        customerId={customerId}
+        customerName={header?.name}
       />
 
       <AlertModalComponent />

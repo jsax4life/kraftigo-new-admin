@@ -11,7 +11,18 @@ export const KrafterPeriodEnum = z.enum([
 export type KrafterPeriod = z.infer<typeof KrafterPeriodEnum>;
 
 // Metric item schema with value and change/note/definition
-export const KrafterMetricItemSchema = z
+export const KrafterMetricItemSchema = z.preprocess((val) => {
+  if (typeof val === "number") return { value: val };
+  if (typeof val === "string") return { value: Number(val) || 0 };
+  if (val && typeof val === "object") {
+    const o = val as Record<string, unknown>;
+    return {
+      ...o,
+      value: Number(o.value ?? o.count ?? o.total ?? 0)
+    };
+  }
+  return { value: 0 };
+}, z
   .object({
     value: z.coerce.number().default(0),
     changePercent: z.coerce.number().nullish(),
@@ -19,10 +30,28 @@ export const KrafterMetricItemSchema = z
     definition: z.string().nullish(),
     note: z.string().nullish()
   })
-  .passthrough();
+  .passthrough());
 
 // Summary Headline Schema
-export const KrafterSummaryResponseSchema = z
+export const KrafterSummaryResponseSchema = z.preprocess((val) => {
+  if (!val || typeof val !== "object") return val;
+  const o = val as Record<string, any>;
+  const root = o.data && typeof o.data === "object" && !Array.isArray(o.data) ? o.data : o;
+  const metricsSource =
+    root.metrics && typeof root.metrics === "object" && !Array.isArray(root.metrics)
+      ? root.metrics
+      : root;
+
+  return {
+    ...root,
+    metrics: {
+      totalKrafters: metricsSource.totalKrafters,
+      completionRate: metricsSource.completionRate,
+      activeKrafters: metricsSource.activeKrafters,
+      probationAlerts: metricsSource.probationAlerts
+    }
+  };
+}, z
   .object({
     period: z.string().nullish(),
     range: z
@@ -58,7 +87,7 @@ export const KrafterSummaryResponseSchema = z
         flaggedCount: 0
       })
   })
-  .passthrough();
+  .passthrough());
 
 export type KrafterSummaryResponse = z.infer<
   typeof KrafterSummaryResponseSchema
@@ -119,7 +148,7 @@ export type TopKraftersResponse = TopKrafterItem[];
 // Directory Item Schema
 export const KrafterDirectoryItemSchema = z
   .object({
-    id: z.string(),
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
     displayUserId: z.string().nullish(),
     name: z.string().default("Krafter"),
     displayName: z.string().nullish(),
@@ -185,17 +214,21 @@ export interface KrafterDirectoryParams {
 // Verification Queue Item Schema
 export const KrafterVerificationItemSchema = z
   .object({
-    id: z.string().nullish(),
-    krafterId: z.string(),
-    krafterName: z.string().default("Krafter"),
+    id: z.union([z.string(), z.number()]).nullish(),
+    krafterId: z.string().nullish(),
+    userId: z.string().nullish(),
+    krafterName: z.string().nullish(),
+    name: z.string().nullish(),
     email: z.string().nullish(),
     trade: z.string().nullish(),
     category: z.string().nullish(),
-    documentId: z.string(),
+    role: z.string().nullish(),
+    documentId: z.string().nullish(),
     documentType: z.string().nullish(),
     documentUrl: z.string().nullish(),
     submittedAt: z.string().nullish(),
-    status: z.string().default("PENDING")
+    createdAt: z.string().nullish(),
+    status: z.string().nullish()
   })
   .passthrough();
 
@@ -203,17 +236,49 @@ export type KrafterVerificationItem = z.infer<
   typeof KrafterVerificationItemSchema
 >;
 
-export const KrafterVerificationQueueResponseSchema = z
-  .object({
-    page: z.coerce.number().default(1),
-    limit: z.coerce.number().default(10),
-    total: z.coerce.number().default(0),
-    totalPendingLabel: z.string().default("0 Pending"),
-    items: z.array(KrafterVerificationItemSchema).default([]),
-    filtered: z.boolean().default(false),
-    legacy: z.record(z.unknown()).nullish()
-  })
-  .passthrough();
+export const KrafterVerificationQueueResponseSchema = z.preprocess(
+  (val) => {
+    if (Array.isArray(val)) {
+      return {
+        items: val,
+        total: val.length,
+        page: 1,
+        limit: val.length,
+        totalPendingLabel: `${val.length} Pending`
+      };
+    }
+    if (val && typeof val === "object") {
+      const o = val as Record<string, unknown>;
+      const list = Array.isArray(o.items)
+        ? o.items
+        : Array.isArray(o.data)
+        ? o.data
+        : Array.isArray(o.queue)
+        ? o.queue
+        : Array.isArray(o.submissions)
+        ? o.submissions
+        : [];
+      return {
+        ...o,
+        items: list,
+        total: o.total ?? list.length,
+        totalPendingLabel: o.totalPendingLabel ?? `${list.length} Pending`
+      };
+    }
+    return { items: [], total: 0 };
+  },
+  z
+    .object({
+      page: z.coerce.number().default(1),
+      limit: z.coerce.number().default(10),
+      total: z.coerce.number().default(0),
+      totalPendingLabel: z.string().default("0 Pending"),
+      items: z.array(KrafterVerificationItemSchema).default([]),
+      filtered: z.boolean().default(false),
+      legacy: z.record(z.unknown()).nullish()
+    })
+    .passthrough()
+);
 
 export type KrafterVerificationQueueResponse = z.infer<
   typeof KrafterVerificationQueueResponseSchema
@@ -252,20 +317,34 @@ export const KrafterDetailHeaderSchema = z
 
 export const KrafterDetailAccountSchema = z
   .object({
-    userId: z.string().default(""),
-    email: z
+    userId: z.union([z.string(), z.number()]).nullish().transform((v) => v != null ? String(v) : ""),
+    email: z.preprocess((val) => {
+      if (typeof val === "string") return { value: val, verified: false };
+      if (val && typeof val === "object") return val;
+      return { value: "", verified: false };
+    }, z
       .object({
         value: z.string().default(""),
         verified: z.boolean().default(false)
       })
-      .default({ value: "", verified: false }),
+      .default({ value: "", verified: false })),
     phone: z.string().nullish(),
     bio: z.string().nullish(),
     occupationDescription: z.string().nullish(),
     uniqueSellingPoint: z.string().nullish(),
     languages: z.array(z.string()).default([]),
     verifiedAddress: z.string().nullish(),
-    stats: z
+    stats: z.preprocess((val) => {
+      if (!val || typeof val !== "object") return val;
+      const o = val as Record<string, any>;
+      let totalEarnings = o.totalEarnings;
+      if (typeof totalEarnings === "number") {
+        totalEarnings = { value: totalEarnings, currency: "GBP" };
+      } else if (typeof totalEarnings === "string") {
+        totalEarnings = { value: Number(totalEarnings) || 0, currency: "GBP" };
+      }
+      return { ...o, totalEarnings };
+    }, z
       .object({
         totalEarnings: z
           .object({
@@ -283,7 +362,7 @@ export const KrafterDetailAccountSchema = z
         totalEarnings: { value: 0, currency: "GBP" },
         totalKraftsCompleted: 0,
         completionRate: 0
-      })
+      }))
   })
   .passthrough();
 
@@ -302,7 +381,7 @@ export type KrafterSkillOffering = z.infer<typeof KrafterSkillOfferingSchema>;
 
 export const KrafterDetailResponseSchema = z
   .object({
-    id: z.string(),
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
     displayUserId: z.string().nullish(),
     header: KrafterDetailHeaderSchema.default({}),
     account: KrafterDetailAccountSchema.default({}),
@@ -434,7 +513,8 @@ export const KrafterPaymentHistoryItemSchema = z
     createdAt: z.string().nullish(),
     fee: z.union([z.number(), z.string()]).nullish(),
     netAmount: z.union([z.number(), z.string()]).nullish(),
-    destination: z.string().nullish()
+    destination: z.string().nullish(),
+    reference: z.string().nullish()
   })
   .passthrough();
 

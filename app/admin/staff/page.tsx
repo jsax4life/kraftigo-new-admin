@@ -7,6 +7,7 @@ import { Search, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { useStaffList } from "@/hooks/useStaff";
 import { staffService } from "@/services/staff.service";
 import { useAlertModal } from "@/components/ui/alert-modal";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import type { StaffPeriod, StaffStatus, StaffMemberRow } from "@/types/staff";
 
 const getRoleStyle = (role?: string | null) => {
@@ -269,43 +270,14 @@ export default function StaffPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between border-t border-[#0000001A] px-6 py-3 text-[11px]">
-            <div className="font-bold text-black text-[12px]">
-              Showing {staffItems.length === 0 ? 0 : (page - 1) * 10 + 1}-{Math.min(page * 10, total)} of {total}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const p = i + 1;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`flex h-6 w-8 items-center justify-center rounded font-medium transition-colors ${
-                      page === p
-                        ? "bg-[#FF6600] text-white"
-                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={10}
+            onPageChange={setPage}
+            isLoading={isLoading}
+          />
         </div>
       </div>
 

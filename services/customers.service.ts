@@ -99,6 +99,10 @@ export const customersService = {
     await apiClient.post(`/api/admin/customers/${id}/actions/lift-restriction`);
   },
 
+  async moveAccountData(id: string): Promise<void> {
+    await apiClient.post(`/api/admin/customers/${id}/actions/move-account-data`);
+  },
+
   async deleteCustomer(id: string): Promise<void> {
     await apiClient.delete(`/api/admin/users/${id}`);
   },

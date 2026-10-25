@@ -425,7 +425,8 @@ export const CustomerPaymentHistoryItemSchema = z
     fee: z.union([z.number(), z.string()]).nullish(),
     netAmount: z.union([z.number(), z.string()]).nullish(),
     paymentMethod: z.string().nullish(),
-    cardLast4: z.string().nullish()
+    cardLast4: z.string().nullish(),
+    reference: z.string().nullish()
   })
   .passthrough();
 

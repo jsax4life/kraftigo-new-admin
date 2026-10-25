@@ -33,6 +33,7 @@ import {
   useUpdateCoupon,
   useDeleteCoupon
 } from "@/hooks/useMarketing";
+import { marketingService } from "@/services/marketing.service";
 import type {
   MarketingPeriod,
   CarouselBanner,
@@ -111,6 +112,17 @@ export default function MarketingPage() {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const handleOpenPreview = async (banner: CarouselBanner) => {
+    setPreviewBanner(banner);
+    setIsPreviewModalOpen(true);
+    try {
+      const fresh = await marketingService.getCarouselBanner(banner.id);
+      if (fresh) setPreviewBanner(fresh);
+    } catch {
+      // Retain already selected banner if single fetch fails
+    }
   };
 
   // Banner Actions
@@ -476,10 +488,7 @@ export default function MarketingPage() {
                     {/* Card Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                       <button
-                        onClick={() => {
-                          setPreviewBanner(b);
-                          setIsPreviewModalOpen(true);
-                        }}
+                        onClick={() => handleOpenPreview(b)}
                         className="flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-black py-1.5 px-2.5 rounded-lg hover:bg-slate-100 transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" />

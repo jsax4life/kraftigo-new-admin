@@ -9,9 +9,12 @@ import {
   useKraftHub,
   useTopPerformingKrafts,
   useCustomKrafts,
+  useCustomKraftsSummary,
   useUpdateCategory,
   useDeleteCategory
 } from "@/hooks/useKrafts";
+import { CustomKraftDetailModal } from "@/components/ui/custom-kraft-detail-modal";
+import { ActionModal } from "@/components/ui/action-modal";
 import type { CategorySubKraft, KraftCategoryItem } from "@/types/krafts";
 
 const fallbackTopPerforming = [
@@ -46,6 +49,9 @@ export default function KraftManagementPage() {
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [categoryToEdit, setCategoryToEdit] = useState<KraftCategoryItem | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<KraftCategoryItem | null>(null);
+  const [selectedCustomKraftId, setSelectedCustomKraftId] = useState<string | null>(null);
   const [subModalConfig, setSubModalConfig] = useState<{
     isOpen: boolean;
     categoryId?: string;
@@ -75,6 +81,8 @@ export default function KraftManagementPage() {
   // Dedicated Top Performing Query (GET /api/admin/kraft-management/top-performing)
   const { data: topPerformingData } = useTopPerformingKrafts(3);
 
+  // Dedicated Custom Krafts Summary (GET /api/admin/kraft-management/custom-krafts/summary)
+  const { data: customKraftsSummary } = useCustomKraftsSummary();
 
   // Map UI tab to backend status
   const statusParam =
@@ -121,38 +129,30 @@ export default function KraftManagementPage() {
     }
   };
 
-  const handleRename = async (
+  const handleRename = (
     e: React.MouseEvent,
     category: KraftCategoryItem
   ) => {
     e.stopPropagation();
     setActiveMenu(null);
-    const newName = window.prompt("Enter new category name:", category.name);
-    if (!newName || !newName.trim() || newName.trim() === category.name) return;
-
-    try {
-      await updateCategoryMutation.mutateAsync({
-        categoryId: category.id,
-        dto: { name: newName.trim() }
-      });
-    } catch (err) {
-      console.error("Failed to rename category:", err);
-    }
+    setCategoryToEdit(category);
+    setIsCreateModalOpen(true);
   };
 
-  const handleRemove = async (
+  const handleRemove = (
     e: React.MouseEvent,
     category: KraftCategoryItem
   ) => {
     e.stopPropagation();
     setActiveMenu(null);
-    const confirmed = window.confirm(
-      `Are you sure you want to remove category "${category.name}"?`
-    );
-    if (!confirmed) return;
+    setCategoryToDelete(category);
+  };
 
+  const handleConfirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
     try {
-      await deleteCategoryMutation.mutateAsync(category.id);
+      await deleteCategoryMutation.mutateAsync(categoryToDelete.id);
+      setCategoryToDelete(null);
     } catch (err) {
       console.error("Failed to remove category:", err);
     }
@@ -176,7 +176,8 @@ export default function KraftManagementPage() {
   // Categories list
   const categories = hubData?.categories?.categories ?? [];
   const customKraftsEntry = hubData?.categories?.customKraftsEntry;
-  const customTabsCounts = hubData?.customKrafts?.tabs;
+  const customTabsCounts =
+    customKraftsSummary?.tabs ?? hubData?.customKrafts?.tabs;
   const customKraftsList = customKraftsData?.data ?? [];
 
   return (
@@ -191,7 +192,10 @@ export default function KraftManagementPage() {
           </p>
         </div>
         <button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            setCategoryToEdit(null);
+            setIsCreateModalOpen(true);
+          }}
           className="whitespace-nowrap rounded-lg bg-[#FF6600] px-4 py-3 text-sm font-semibold text-white hover:bg-[#E65C00] transition-colors shadow-sm"
         >
           Create a new category
@@ -351,7 +355,8 @@ export default function KraftManagementPage() {
                       return (
                         <div
                           key={item.id}
-                          className={`flex flex-col sm:flex-row gap-3 py-4 ${
+                          onClick={() => setSelectedCustomKraftId(item.id)}
+                          className={`flex flex-col sm:flex-row gap-3 py-4 cursor-pointer hover:bg-slate-100/60 rounded-xl px-2 transition-colors ${
                             index !== customKraftsList.length - 1
                               ? "border-b border-[#0000001A]"
                               : ""
@@ -395,7 +400,13 @@ export default function KraftManagementPage() {
                                 {photosCount > 0 ? `${photosCount} Images` : "No photos"}
                               </span>
                             </div>
-                            <span className="text-[#FF6600] text-[12px] font-bold hover:underline cursor-pointer">
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCustomKraftId(item.id);
+                              }}
+                              className="text-[#FF6600] text-[12px] font-bold hover:underline cursor-pointer"
+                            >
                               View
                             </span>
                           </div>
@@ -587,10 +598,14 @@ export default function KraftManagementPage() {
         </div>
       </section>
 
-      {/* Create Category Modal */}
+      {/* Create / Edit Category Modal */}
       <CreateCategoryModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        categoryToEdit={categoryToEdit}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setCategoryToEdit(null);
+        }}
       />
 
       {/* Sub-Kraft Create / Detail Modal */}
@@ -600,6 +615,24 @@ export default function KraftManagementPage() {
         categoryId={subModalConfig.categoryId}
         categoryName={subModalConfig.categoryName}
         kraft={subModalConfig.kraft}
+      />
+
+      {/* Custom Kraft Detail Modal */}
+      <CustomKraftDetailModal
+        customKraftId={selectedCustomKraftId}
+        isOpen={Boolean(selectedCustomKraftId)}
+        onClose={() => setSelectedCustomKraftId(null)}
+      />
+
+      {/* Delete Category Confirmation Modal */}
+      <ActionModal
+        isOpen={Boolean(categoryToDelete)}
+        onClose={() => setCategoryToDelete(null)}
+        title="Remove Kraft Category"
+        description={`Are you sure you want to remove the category "${categoryToDelete?.name}"? All nested Krafts will no longer be available under this category.`}
+        primaryButtonText="Remove Category"
+        primaryButtonClasses="bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+        primaryButtonAction={handleConfirmDeleteCategory}
       />
     </div>
   );

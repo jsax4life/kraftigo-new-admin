@@ -74,7 +74,7 @@ export function AlertModal({
   const modalTitle = title || config.defaultTitle;
 
   return createPortal(
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity"
@@ -140,35 +140,48 @@ export function useAlertModal() {
     type: "error"
   });
 
-  const showAlert = (options: {
-    message: string;
-    title?: string;
-    type?: AlertType;
-    buttonText?: string;
-  }) => {
-    setState({
-      isOpen: true,
-      message: options.message,
-      title: options.title,
-      type: options.type ?? "error",
-      buttonText: options.buttonText
-    });
-  };
-
-  const closeAlert = () => {
-    setState((prev) => ({ ...prev, isOpen: false }));
-  };
-
-  const AlertModalComponent = () => (
-    <AlertModal
-      isOpen={state.isOpen}
-      onClose={closeAlert}
-      title={state.title}
-      message={state.message}
-      type={state.type}
-      buttonText={state.buttonText}
-    />
+  const showAlert = React.useCallback(
+    (options: {
+      message: string;
+      title?: string;
+      type?: AlertType;
+      buttonText?: string;
+    }) => {
+      setState({
+        isOpen: true,
+        message: options.message,
+        title: options.title,
+        type: options.type ?? "error",
+        buttonText: options.buttonText
+      });
+    },
+    []
   );
+
+  const closeAlert = React.useCallback(() => {
+    setState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const stateRef = React.useRef({ state, closeAlert });
+  stateRef.current = { state, closeAlert };
+
+  const AlertModalComponent = React.useMemo(() => {
+    const Component: React.FC = () => {
+      const { state: curState, closeAlert: curClose } = stateRef.current;
+      return (
+        <AlertModal
+          isOpen={curState.isOpen}
+          onClose={curClose}
+          title={curState.title}
+          message={curState.message}
+          type={curState.type}
+          buttonText={curState.buttonText}
+        />
+      );
+    };
+    Component.displayName = "AlertModalComponent";
+    return Component;
+  }, []);
 
   return {
     showAlert,

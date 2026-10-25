@@ -30,6 +30,14 @@ export function useCarouselBanners() {
   });
 }
 
+export function useCarouselBanner(id: string | null | undefined) {
+  return useQuery<CarouselBanner, Error>({
+    queryKey: ["admin", "marketing", "carousel", id],
+    queryFn: () => marketingService.getCarouselBanner(id!),
+    enabled: Boolean(id)
+  });
+}
+
 export function useCreateCarouselBanner() {
   const queryClient = useQueryClient();
   return useMutation<CarouselBanner, Error, CreateCarouselBannerDto>({

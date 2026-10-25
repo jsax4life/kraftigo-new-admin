@@ -12,6 +12,7 @@ import {
   useKrafterVerificationQueue
 } from "@/hooks/useKrafters";
 import { kraftersService } from "@/services/krafters.service";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import type { KrafterPeriod, TopKrafterItem } from "@/types/krafters";
 
 const PAGE_SIZE = 10;
@@ -452,46 +453,14 @@ export default function KraftersPageContent() {
         )}
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-[#F8F9FA] px-6 py-3 text-[11px]">
-          <div className="font-bold text-black">
-            Showing {kraftersList.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}-
-            {Math.min(page * PAGE_SIZE, totalCount)} of {totalCount}
-          </div>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
-              const pageNum = idx + 1;
-              const isActive = page === pageNum;
-              return (
-                <button
-                  key={pageNum}
-                  onClick={() => setPage(pageNum)}
-                  disabled={isFetching}
-                  className={`flex h-6 w-8 sm:w-12 items-center justify-center rounded font-medium transition-colors ${
-                    isActive
-                      ? "bg-[#FF6600] text-white"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setPage((p) => Math.max(p - 1, 1))}
-              disabled={page <= 1 || isFetching}
-              className="flex h-6 w-8 sm:w-12 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            >
-              <ChevronLeft className="h-3 w-3" />
-            </button>
-            <button
-              onClick={() => setPage((p) => (p < totalPages ? p + 1 : p))}
-              disabled={page >= totalPages || isFetching}
-              className="flex h-6 w-8 sm:w-12 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            >
-              <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={totalCount}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+          isLoading={isFetching}
+        />
       </div>
 
       {/* Restricted Profiles Card */}

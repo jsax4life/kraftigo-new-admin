@@ -3,8 +3,8 @@ import { z } from "zod";
 // Sub-Kraft / Skill under a category
 export const CategorySubKraftSchema = z
   .object({
-    id: z.string(),
-    name: z.string(),
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
+    name: z.string().default("Kraft"),
     description: z.string().nullish(),
     iconUrl: z.string().nullish(),
     isActive: z.boolean().default(true),
@@ -18,8 +18,8 @@ export type CategorySubKraft = z.infer<typeof CategorySubKraftSchema>;
 // Category Item
 export const KraftCategoryItemSchema = z
   .object({
-    id: z.string(),
-    name: z.string(),
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
+    name: z.string().default("Category"),
     description: z.string().nullish(),
     imageUrl: z.string().nullish(),
     isActive: z.boolean().default(true),
@@ -43,8 +43,8 @@ export type CustomKraftsEntry = z.infer<typeof CustomKraftsEntrySchema>;
 // Top Performing Category / Kraft
 export const TopPerformingKraftSchema = z
   .object({
-    id: z.string(),
-    name: z.string(),
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
+    name: z.string().default("Top Kraft"),
     description: z.string().nullish(),
     imageUrl: z.string().nullish(),
     isActive: z.boolean().default(true),
@@ -55,7 +55,18 @@ export const TopPerformingKraftSchema = z
 export type TopPerformingKraft = z.infer<typeof TopPerformingKraftSchema>;
 
 // Categories List Response
-export const KraftCategoriesResponseSchema = z
+export const KraftCategoriesResponseSchema = z.preprocess((val) => {
+  if (Array.isArray(val)) {
+    return { categories: val };
+  }
+  if (val && typeof val === "object") {
+    const o = val as Record<string, any>;
+    if (Array.isArray(o.data)) {
+      return { ...o, categories: o.data };
+    }
+  }
+  return val;
+}, z
   .object({
     categories: z.array(KraftCategoryItemSchema).default([]),
     customKraftsEntry: CustomKraftsEntrySchema.default({
@@ -64,7 +75,7 @@ export const KraftCategoriesResponseSchema = z
       totalCount: 0
     })
   })
-  .passthrough();
+  .passthrough());
 
 export type KraftCategoriesResponse = z.infer<
   typeof KraftCategoriesResponseSchema
@@ -108,7 +119,7 @@ export type KraftHubResponse = z.infer<typeof KraftHubResponseSchema>;
 // Custom Kraft Queue Item
 export const CustomKraftQueueItemSchema = z
   .object({
-    id: z.string(),
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
     description: z.string().default(""),
     photos: z.array(z.string()).default([]),
     roughCategoryId: z.string().nullish(),
@@ -135,7 +146,12 @@ export const CustomKraftQueueItemSchema = z
 
 export type CustomKraftQueueItem = z.infer<typeof CustomKraftQueueItemSchema>;
 
-export const CustomKraftsListResponseSchema = z
+export const CustomKraftsListResponseSchema = z.preprocess((val) => {
+  if (Array.isArray(val)) {
+    return { data: val, meta: { total: val.length, page: 1, limit: 10, totalPages: 1 } };
+  }
+  return val;
+}, z
   .object({
     data: z.array(CustomKraftQueueItemSchema).default([]),
     meta: z
@@ -148,7 +164,7 @@ export const CustomKraftsListResponseSchema = z
       .passthrough()
       .default({ total: 0, page: 1, limit: 10, totalPages: 1 })
   })
-  .passthrough();
+  .passthrough());
 
 export type CustomKraftsListResponse = z.infer<
   typeof CustomKraftsListResponseSchema
@@ -192,7 +208,22 @@ export interface AdminUpdateKraftSkillDto {
   killSwitchActive?: boolean;
 }
 
-export const CustomKraftsSummarySchema = z
+export const CustomKraftsSummarySchema = z.preprocess((val) => {
+  if (!val || typeof val !== "object") return val;
+  const o = val as Record<string, any>;
+  const root = o.data && typeof o.data === "object" ? o.data : o;
+  if (!root.tabs && ("new" in root || "underReview" in root || "rejected" in root)) {
+    return {
+      tabs: {
+        new: root.new ?? 0,
+        underReview: root.underReview ?? 0,
+        rejected: root.rejected ?? 0
+      },
+      totalPublished: root.totalPublished ?? 0
+    };
+  }
+  return root;
+}, z
   .object({
     tabs: z
       .object({
@@ -203,15 +234,14 @@ export const CustomKraftsSummarySchema = z
       .default({ new: 0, underReview: 0, rejected: 0 }),
     totalPublished: z.coerce.number().default(0)
   })
-  .passthrough();
+  .passthrough());
 
 export type CustomKraftsSummary = z.infer<typeof CustomKraftsSummarySchema>;
-
 
 // Single Kraft Detail
 export const KraftDetailSchema = z
   .object({
-    id: z.string(),
+    id: z.union([z.string(), z.number()]).transform((v) => String(v)),
     name: z.string(),
     description: z.string().nullish(),
     iconUrl: z.string().nullish(),
@@ -225,7 +255,26 @@ export const KraftDetailSchema = z
 export type KraftDetail = z.infer<typeof KraftDetailSchema>;
 
 // Kraft Metrics Schema (Krafters, Bookings, Avg Price, Completion Rate)
-export const KraftMetricsSchema = z
+export const KraftMetricsSchema = z.preprocess((val) => {
+  if (!val || typeof val !== "object") return val;
+  const o = val as Record<string, any>;
+  const root = o.data && typeof o.data === "object" ? o.data : o;
+  let avgPrice = 0;
+  let avgPriceFormatted: string | undefined = undefined;
+  if (typeof root.avgPrice === "number") {
+    avgPrice = root.avgPrice;
+  } else if (typeof root.avgPrice === "string") {
+    avgPrice = Number(root.avgPrice) || 0;
+  } else if (root.avgPrice && typeof root.avgPrice === "object") {
+    avgPrice = Number(root.avgPrice.value ?? root.avgPrice.amount ?? 0);
+    avgPriceFormatted = typeof root.avgPrice.formatted === "string" ? root.avgPrice.formatted : undefined;
+  }
+  return {
+    ...root,
+    avgPrice,
+    avgPriceFormatted: avgPriceFormatted ?? root.avgPriceFormatted
+  };
+}, z
   .object({
     krafters: z.coerce.number().default(0),
     bookings: z.coerce.number().default(0),
@@ -233,7 +282,7 @@ export const KraftMetricsSchema = z
     avgPriceFormatted: z.string().nullish(),
     completionRate: z.coerce.number().default(0)
   })
-  .passthrough();
+  .passthrough());
 
 export type KraftMetrics = z.infer<typeof KraftMetricsSchema>;
 

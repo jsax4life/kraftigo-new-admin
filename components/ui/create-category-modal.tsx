@@ -3,18 +3,20 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Image as ImageIcon, Loader2 } from "lucide-react";
-import { useCreateCategory } from "@/hooks/useKrafts";
+import { useCreateCategory, useUpdateCategory } from "@/hooks/useKrafts";
 import type { KraftCategoryItem } from "@/types/krafts";
 
 interface CreateCategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  categoryToEdit?: KraftCategoryItem | null;
   onCreated?: (category: KraftCategoryItem) => void;
 }
 
 export function CreateCategoryModal({
   isOpen,
   onClose,
+  categoryToEdit,
   onCreated
 }: CreateCategoryModalProps) {
   const [name, setName] = useState("");
@@ -24,6 +26,7 @@ export function CreateCategoryModal({
   const [formError, setFormError] = useState<string | null>(null);
 
   const createCategoryMutation = useCreateCategory();
+  const updateCategoryMutation = useUpdateCategory();
 
   useEffect(() => {
     setMounted(true);
@@ -31,14 +34,24 @@ export function CreateCategoryModal({
 
   useEffect(() => {
     if (isOpen) {
-      setName("");
-      setDescription("");
-      setIsActive(true);
+      if (categoryToEdit) {
+        setName(categoryToEdit.name || "");
+        setDescription(categoryToEdit.description || "");
+        setIsActive(categoryToEdit.isActive ?? true);
+      } else {
+        setName("");
+        setDescription("");
+        setIsActive(true);
+      }
       setFormError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, categoryToEdit]);
 
   if (!isOpen || !mounted) return null;
+
+  const isEditing = Boolean(categoryToEdit);
+  const isPending =
+    createCategoryMutation.isPending || updateCategoryMutation.isPending;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,15 +62,28 @@ export function CreateCategoryModal({
 
     setFormError(null);
     try {
-      const created = await createCategoryMutation.mutateAsync({
-        name: name.trim(),
-        description: description.trim() || undefined,
-        isActive
-      });
-      onCreated?.(created);
+      if (isEditing && categoryToEdit) {
+        const updated = await updateCategoryMutation.mutateAsync({
+          categoryId: categoryToEdit.id,
+          dto: {
+            name: name.trim(),
+            description: description.trim() || undefined,
+            isActive
+          }
+        });
+        onCreated?.(updated);
+      } else {
+        const created = await createCategoryMutation.mutateAsync({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          isActive
+        });
+        onCreated?.(created);
+      }
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to create category";
+      const msg =
+        err instanceof Error ? err.message : "Failed to save category";
       setFormError(msg);
     }
   };
@@ -76,7 +102,7 @@ export function CreateCategoryModal({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#E3BFB1] p-4">
             <h2 className="text-xl font-garet font-[850] text-black">
-              Create New Category
+              {isEditing ? "Edit Category" : "Create New Category"}
             </h2>
             <button
               type="button"
@@ -173,20 +199,20 @@ export function CreateCategoryModal({
             <button
               type="button"
               onClick={onClose}
-              disabled={createCategoryMutation.isPending}
+              disabled={isPending}
               className="text-[14px] font-semibold text-[#000000CC] hover:text-black transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={createCategoryMutation.isPending}
+              disabled={isPending}
               className="flex items-center gap-2 rounded-lg bg-[#FF6600] px-6 py-2.5 text-[14px] font-semibold text-white hover:bg-[#E65C00] transition-colors shadow-sm disabled:opacity-50"
             >
-              {createCategoryMutation.isPending && (
+              {isPending && (
                 <Loader2 className="h-4 w-4 animate-spin text-white" />
               )}
-              Create Category
+              {isEditing ? "Save Changes" : "Create Category"}
             </button>
           </div>
         </form>

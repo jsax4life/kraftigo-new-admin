@@ -8,7 +8,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Check
+  Check,
+  Loader2
 } from "lucide-react";
 import {
   AreaChart,
@@ -20,11 +21,13 @@ import {
 } from "recharts";
 import Image from "next/image";
 import { KrafterLocationsPanel } from "@/components/krafters/krafter-locations-panel";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import {
   useDashboardStats,
   useOverviewSummary,
   useLiveBookings,
-  useCriticalPulse
+  useCriticalPulse,
+  useOverviewKrafterVerificationQueue
 } from "@/hooks/useDashboardStats";
 import { dashboardService } from "@/services/dashboard.service";
 import { useAlertModal } from "@/components/ui/alert-modal";
@@ -37,13 +40,7 @@ function formatCount(value: number | undefined): string {
 
 
 
-const verificationQueue = [
-  { id: 1, name: "Natelie Gates", role: "Master Plumber" },
-  { id: 2, name: "Natelie Gates", role: "Master Plumber" },
-  { id: 3, name: "Natelie Gates", role: "Master Plumber" },
-  { id: 4, name: "Natelie Gates", role: "Master Plumber" },
-  { id: 5, name: "Natelie Gates", role: "Master Plumber" },
-];
+
 
 // --- TOOLTIPS & DOTS ---
 const CustomTooltip = ({
@@ -161,6 +158,11 @@ export default function DashboardPage() {
     pulseData?.comparison?.currentSeriesLabel ?? "This Month";
   const previousSeriesLabel =
     pulseData?.comparison?.previousSeriesLabel ?? "Last Month";
+
+  const {
+    data: verificationQueueData,
+    isLoading: isQueueLoading
+  } = useOverviewKrafterVerificationQueue({ limit: 5 });
 
   const { showAlert, AlertModalComponent } = useAlertModal();
   const [isExportingLive, setIsExportingLive] = useState(false);
@@ -622,28 +624,14 @@ export default function DashboardPage() {
 
           {/* Pagination */}
           {liveTotal > 0 && (
-            <div className="flex items-center justify-between border-t border-slate-100 bg-[#F8F9FA] px-6 py-3 text-[11px]">
-              <div className="font-bold text-black">
-                Showing {Math.min((livePage - 1) * 5 + 1, liveTotal)}-
-                {Math.min(livePage * 5, liveTotal)} of {liveTotal}
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setLivePage((p) => Math.max(p - 1, 1))}
-                  disabled={livePage <= 1 || isLiveLoading}
-                  className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-                >
-                  <ChevronLeft className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={() => setLivePage((p) => (p < liveTotalPages ? p + 1 : p))}
-                  disabled={livePage >= liveTotalPages || isLiveLoading}
-                  className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-                >
-                  <ChevronRight className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
+            <PaginationBar
+              page={livePage}
+              totalPages={liveTotalPages}
+              total={liveTotal}
+              pageSize={5}
+              onPageChange={setLivePage}
+              isLoading={isLiveLoading}
+            />
           )}
         </div>
       </div>
@@ -651,46 +639,76 @@ export default function DashboardPage() {
       {/* Krafter Verification Queue */}
       <div className="space-y-4 pt-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-garet font-[850] text-black">Krafter Verification Queue</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-garet font-[850] text-black">Krafter Verification Queue</h2>
+            {verificationQueueData?.total != null && (
+              <span className="rounded-full bg-[#FF6600]/10 px-2.5 py-0.5 text-xs font-bold text-[#FF6600]">
+                {verificationQueueData.total}
+              </span>
+            )}
+          </div>
           <Link href="/admin/work-eligibility" className="flex items-center gap-1 text-xs font-semibold text-[#FF6600] hover:underline">
             See All Queue <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
 
         <div className="rounded-xl border border-[#0000001A] bg-[#F6F6F6] overflow-hidden shadow-sm">
-          <div className="flex flex-col">
-            {verificationQueue.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between px-6 py-3 border-b border-[#0000001A]"
-              >
-                <div className="flex items-center gap-3">
-                  <Image
-                    src="/images/login.jpg"
-                    alt="Avatar"
-                    height={100}
-                    width={100}
-                    className="rounded-[8px] w-12 h-12 object-cover"
-                  />
-                  <div>
-                    <div className="text-[12px] font-extrabold text-black">{item.name}</div>
-                    <div className="text-[11px] font-medium text-slate-700">{item.role}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/admin/work-eligibility"
-                    className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0000FF] text-white hover:bg-blue-700 transition-colors"
+          {isQueueLoading ? (
+            <div className="p-8 text-center text-sm text-slate-500">
+              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-[#FF6600]" />
+              Loading krafter verification queue...
+            </div>
+          ) : verificationQueueData?.items && verificationQueueData.items.length > 0 ? (
+            <div className="flex flex-col">
+              {verificationQueueData.items.map((item: any, idx: number) => {
+                const displayName = item.krafterName || item.name || item.fullName || "Krafter";
+                const displayRole = item.trade || item.category || item.role || item.documentType || "Trade Professional";
+                const itemId = item.id || item.krafterId || item.userId || idx;
+                const krafterUrl = item.id
+                  ? `/admin/work-eligibility/${item.id}`
+                  : item.krafterId
+                  ? `/admin/krafters/${item.krafterId}`
+                  : "/admin/work-eligibility";
+
+                return (
+                  <div
+                    key={itemId}
+                    className={`flex items-center justify-between px-6 py-3 border-b border-[#0000001A] last:border-b-0 ${idx % 2 === 0 ? "bg-[#E6E6E6]" : "bg-[#F6F6F6]"}`}
                   >
-                    <Image src="/file.svg" alt="Review" height={20} width={20} className="h-4 w-4 invert" />
-                  </Link>
-                  <button className="flex h-7 w-7 items-center justify-center rounded-md bg-[#FF6600] text-white hover:bg-orange-600 transition-colors">
-                    <Check className="h-4 w-4" strokeWidth={3} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 text-[#FF6600] font-bold text-sm">
+                        {displayName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-[12px] font-extrabold text-black">{displayName}</div>
+                        <div className="text-[11px] font-medium text-slate-700">{displayRole}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={krafterUrl}
+                        className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0000FF] text-white hover:bg-blue-700 transition-colors"
+                        title="Review Krafter Document"
+                      >
+                        <Image src="/file.svg" alt="Review" height={20} width={20} className="h-4 w-4 invert" />
+                      </Link>
+                      <Link
+                        href={krafterUrl}
+                        className="flex h-7 w-7 items-center justify-center rounded-md bg-[#FF6600] text-white hover:bg-orange-600 transition-colors"
+                        title="Inspect & Approve"
+                      >
+                        <Check className="h-4 w-4" strokeWidth={3} />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-8 text-center text-sm text-slate-500">
+              No Krafters currently pending verification in the queue.
+            </div>
+          )}
         </div>
       </div>
 

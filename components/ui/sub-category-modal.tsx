@@ -6,6 +6,7 @@ import { Search, ChevronDown, X, Loader2, Check } from "lucide-react";
 import Image from "next/image";
 import {
   useAddKraft,
+  useUpdateKraft,
   useToggleKillSwitch,
   useKraftMetrics,
   useKraftKrafters,
@@ -54,6 +55,7 @@ export function SubCategoryModal({
   }, [krafterSearch]);
 
   const addKraftMutation = useAddKraft();
+  const updateKraftMutation = useUpdateKraft();
   const toggleKillSwitchMutation = useToggleKillSwitch();
   const { data: metricsData } = useKraftMetrics(kraft?.id ?? "");
 
@@ -134,6 +136,28 @@ export function SubCategoryModal({
     }
   };
 
+  const handleUpdateKraft = async () => {
+    if (!kraft?.id) return;
+    if (!name.trim()) {
+      setErrorMsg("Kraft name is required");
+      return;
+    }
+
+    try {
+      setErrorMsg(null);
+      await updateKraftMutation.mutateAsync({
+        skillId: kraft.id,
+        dto: {
+          name: name.trim(),
+          description: description.trim() || undefined
+        }
+      });
+      setIsEditing(false);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Failed to update kraft");
+    }
+  };
+
   const handleExportKrafters = async () => {
     if (!kraft?.id) return;
     try {
@@ -168,7 +192,7 @@ export function SubCategoryModal({
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1.5 hover:bg-slate-100 rounded-md transition-colors z-10"
+            className="absolute top-2 right-2 p-1.5 hover:bg-slate-100 rounded-md transition-colors z-10"
           >
             <X className="h-5 w-5 text-slate-500" />
           </button>
@@ -233,7 +257,7 @@ export function SubCategoryModal({
                 </div>
 
                 {/* Kill Switch */}
-                <div className="flex flex-col items-center shrink-0">
+                <div className="flex flex-col items-center shrink-0 mt-4">
                   <button
                     onClick={handleToggleKillSwitch}
                     disabled={toggleKillSwitchMutation.isPending}
@@ -312,6 +336,34 @@ export function SubCategoryModal({
                   <Check className="h-3.5 w-3.5" />
                 )}
                 Save Kraft
+              </button>
+            </div>
+          )}
+
+          {/* Action Row for Edit Mode */}
+          {isEditing && !isCreateMode && (
+            <div className="px-6 py-2 border-b border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+              <button
+                onClick={() => {
+                  setName(kraft?.name || "");
+                  setDescription(kraft?.description || "");
+                  setIsEditing(false);
+                }}
+                className="px-4 py-1.5 text-xs font-semibold text-slate-600 hover:text-black"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateKraft}
+                disabled={updateKraftMutation.isPending}
+                className="flex items-center gap-1.5 rounded-lg bg-[#FF6600] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#E65C00] transition-colors disabled:opacity-50"
+              >
+                {updateKraftMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5" />
+                )}
+                Save Changes
               </button>
             </div>
           )}

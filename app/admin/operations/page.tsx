@@ -21,6 +21,7 @@ import {
   Radio,
   ExternalLink
 } from "lucide-react";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 
 export type ContentType = "ANNOUNCEMENT" | "SERVICE_ZONE" | "HELP_ARTICLE" | "POLICY";
 
@@ -525,34 +526,13 @@ export default function OperationsPage() {
           </div>
 
           {/* Pagination Bar */}
-          <div className="flex items-center justify-between border-t border-slate-200/60 px-6 py-4 text-xs bg-[#F6F6F6]">
-            <span className="text-[11px] text-slate-600">
-              Showing <span className="font-semibold">{paginatedItems.length}</span> of{" "}
-              <span className="font-semibold">{filteredItems.length}</span> items
-            </span>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-black hover:bg-slate-50 disabled:opacity-40"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                <span>Previous</span>
-              </button>
-              <span className="text-[11px] font-medium text-slate-700">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-black hover:bg-slate-50 disabled:opacity-40"
-              >
-                <span>Next</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={filteredItems.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 

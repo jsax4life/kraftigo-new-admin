@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useRestrictedUsers";
 import { restrictedUsersService } from "@/services/restricted-users.service";
 import { useAlertModal } from "@/components/ui/alert-modal";
+import { PaginationBar } from "@/components/ui/pagination-bar";
 import type {
   RestrictedDuration,
   RestrictedReason,
@@ -341,7 +342,7 @@ export default function RestrictedListPage() {
 
                   return (
                     <tr
-                      key={user.id}
+                      key={user.id || user.userId || index}
                       className={`cursor-pointer hover:bg-slate-100 transition-colors ${
                         index % 2 === 0 ? "bg-[#DFDFDF]/40" : "bg-[#F6F6F6]"
                       }`}
@@ -407,7 +408,7 @@ export default function RestrictedListPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleDropdown(user.id);
+                                toggleDropdown(user.userId || user.id);
                               }}
                               className="font-bold text-[#FF1E1E] hover:opacity-80 whitespace-nowrap text-xs transition-opacity"
                             >
@@ -417,7 +418,7 @@ export default function RestrictedListPage() {
                         </div>
 
                         {/* Dropdown Menu for Duration */}
-                        {activeDropdown === user.id && (
+                        {activeDropdown === (user.userId || user.id) && (
                           <div className="absolute right-6 top-10 w-44 bg-[#F8F8F8] border border-[#0000001A] shadow-lg rounded-xl z-20 flex flex-col overflow-hidden text-left">
                             <div className="px-4 py-3 font-bold text-xs bg-slate-100 border-b border-[#0000000D]">
                               Select Duration
@@ -457,43 +458,14 @@ export default function RestrictedListPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between border-t border-[#0000001A] px-6 py-3 text-[11px]">
-          <div className="font-bold text-black text-[12px]">
-            Showing {users.length === 0 ? 0 : (page - 1) * 10 + 1}-{Math.min(page * 10, total)} of {total}
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            >
-              <ChevronLeft className="h-3 w-3" />
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const p = i + 1;
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`flex h-6 w-8 items-center justify-center rounded font-medium transition-colors ${
-                    page === p
-                      ? "bg-[#FF6600] text-white"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {p}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page >= totalPages}
-              className="flex h-6 w-8 items-center justify-center rounded bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
-            >
-              <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={10}
+          onPageChange={setPage}
+          isLoading={isUsersLoading}
+        />
       </div>
 
       <ProfileLogsModal
