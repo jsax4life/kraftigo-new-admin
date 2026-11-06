@@ -1,10 +1,64 @@
 import { apiClient } from "@/lib/api-client";
-import { parseEntityResponse } from "@/lib/admin-api";
-import { DashboardStatsSchema, type DashboardStats } from "@/types/dashboard";
+import { parseEntityResponse, parsePaginatedResponse, type PaginatedResult } from "@/lib/admin-api";
+import { fetchCsvExport } from "@/lib/download-csv";
+import {
+  DashboardStatsSchema,
+  LiveBookingRowSchema,
+  CriticalPulseResponseSchema,
+  OverviewSummaryResponseSchema,
+  OverviewVerificationQueueResponseSchema,
+  type DashboardStats,
+  type LiveBookingRow,
+  type LiveBookingsParams,
+  type CriticalPulseParams,
+  type CriticalPulseResponse,
+  type OverviewSummaryResponse,
+  type OverviewSummaryPeriod,
+  type OverviewVerificationQueueResponse
+} from "@/types/dashboard";
 
 export const dashboardService = {
   async getStats(): Promise<DashboardStats> {
     const res = await apiClient.get("/api/admin/dashboard/stats");
     return parseEntityResponse(DashboardStatsSchema, res.data, "dashboard stats");
+  },
+
+  async getOverviewSummary(period?: OverviewSummaryPeriod | string): Promise<OverviewSummaryResponse> {
+    const res = await apiClient.get("/api/admin/overview/summary", {
+      params: period ? { period } : undefined
+    });
+    return parseEntityResponse(OverviewSummaryResponseSchema, res.data, "overview summary");
+  },
+
+  async getLiveBookings(params?: LiveBookingsParams): Promise<PaginatedResult<LiveBookingRow>> {
+    const res = await apiClient.get("/api/admin/overview/bookings/live", { params });
+    return parsePaginatedResponse(LiveBookingRowSchema, res.data, "live bookings");
+  },
+
+  async exportLiveBookingsCsv(params?: LiveBookingsParams): Promise<void> {
+    await fetchCsvExport(
+      "/api/admin/overview/bookings/live/export",
+      "live-bookings.csv",
+      { params }
+    );
+  },
+
+  async getCriticalPulse(params?: CriticalPulseParams): Promise<CriticalPulseResponse> {
+    const res = await apiClient.get("/api/admin/overview/critical-pulse", { params });
+    return parseEntityResponse(CriticalPulseResponseSchema, res.data, "critical pulse");
+  },
+
+  async getKrafterVerificationQueue(
+    params: { page?: number; limit?: number } = {}
+  ): Promise<OverviewVerificationQueueResponse> {
+    const res = await apiClient.get(
+      "/api/admin/overview/krafter-verification-queue",
+      { params }
+    );
+    return parseEntityResponse(
+      OverviewVerificationQueueResponseSchema,
+      res.data,
+      "overview krafter verification queue"
+    );
   }
 };

@@ -17,10 +17,10 @@ export function KrafterLocationsPanel() {
     .slice(0, 12);
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+    <section className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-medium text-slate-100">
+          <h2 className="text-sm font-medium text-black">
             Krafters by location
           </h2>
           <p className="mt-0.5 text-xs text-slate-500">

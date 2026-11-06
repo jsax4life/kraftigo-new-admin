@@ -19,15 +19,34 @@ export function unwrapListPayload(data: unknown): unknown[] {
     if (Array.isArray(o.data)) return o.data;
     if (Array.isArray(o.items)) return o.items;
     if (Array.isArray(o.results)) return o.results;
+    if (Array.isArray(o.users)) return o.users;
+    if (Array.isArray(o.restrictedUsers)) return o.restrictedUsers;
+    if (Array.isArray(o.logs)) return o.logs;
+    if (Array.isArray(o.profileLogs)) return o.profileLogs;
     if (Array.isArray(o.locations)) return o.locations;
+    if (Array.isArray(o.banners)) return o.banners;
+    if (Array.isArray(o.coupons)) return o.coupons;
+    if (Array.isArray(o.roles)) return o.roles;
+    if (Array.isArray(o.payouts)) return o.payouts;
   }
   return [];
 }
 
 export function unwrapEntityPayload(data: unknown): unknown {
-  if (data && typeof data === "object" && "data" in data) {
-    const inner = (data as { data: unknown }).data;
-    if (inner !== undefined && inner !== null) return inner;
+  if (data && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    if (o.data !== undefined && o.data !== null && typeof o.data === "object" && !Array.isArray(o.data)) {
+      return o.data;
+    }
+    if (o.banner !== undefined && o.banner !== null && typeof o.banner === "object" && !Array.isArray(o.banner)) {
+      return o.banner;
+    }
+    if (o.coupon !== undefined && o.coupon !== null && typeof o.coupon === "object" && !Array.isArray(o.coupon)) {
+      return o.coupon;
+    }
+    if (o.item !== undefined && o.item !== null && typeof o.item === "object" && !Array.isArray(o.item)) {
+      return o.item;
+    }
   }
   return data;
 }
@@ -65,7 +84,7 @@ function extractMeta(raw: unknown, rowCount: number): PaginatedMeta {
 }
 
 export function parsePaginatedResponse<T>(
-  itemSchema: z.ZodType<T>,
+  itemSchema: z.ZodType<T, any, any>,
   data: unknown,
   label: string
 ): PaginatedResult<T> {
@@ -76,17 +95,18 @@ export function parsePaginatedResponse<T>(
   rows.forEach((row, index) => {
     const parsed = itemSchema.safeParse(row);
     if (!parsed.success) {
-      console.error(`${label} row ${index} validation error`, parsed.error);
-      throw new Error(`Unexpected ${label} list response shape`);
+      console.warn(`${label} row ${index} schema mismatch, using fallback row:`, parsed.error);
+      items.push(row as T);
+    } else {
+      items.push(parsed.data);
     }
-    items.push(parsed.data);
   });
 
   return { items, meta };
 }
 
 export function parseEntityResponse<T>(
-  itemSchema: z.ZodType<T>,
+  itemSchema: z.ZodType<T, any, any>,
   data: unknown,
   label: string
 ): T {

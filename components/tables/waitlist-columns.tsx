@@ -8,7 +8,7 @@ export const waitlistColumns: ColumnDef<WaitlistEntry>[] = [
     accessorKey: "fullName",
     header: "Name",
     cell: ({ row }) => (
-      <span className="font-medium text-slate-50">
+      <span className="font-meduim text-slate-900">
         {row.original.fullName}
       </span>
     )
@@ -38,7 +38,7 @@ export const waitlistColumns: ColumnDef<WaitlistEntry>[] = [
           ? "Customer"
           : "Both";
       return (
-        <span className="inline-flex rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+        <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
           {label}
         </span>
       );
@@ -53,11 +53,11 @@ export const waitlistColumns: ColumnDef<WaitlistEntry>[] = [
     header: "Contact OK",
     cell: ({ row }) =>
       row.original.agreesToContact ? (
-        <span className="inline-flex rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200">
+        <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
           Agreed
         </span>
       ) : (
-        <span className="inline-flex rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-200">
+        <span className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700">
           Do not contact
         </span>
       )

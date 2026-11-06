@@ -16,19 +16,18 @@ export default function WaitlistPage() {
   const filtered: WaitlistEntry[] = applyFilters(data ?? []);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-lg font-semibold">Waitlist</h1>
-          <p className="text-sm text-slate-400">
+          <h1 className="text-2xl font-garet font-bold">Waitlist</h1>
+          <p className="text-sm mt-1 text-slate-600">
             Live view of users who joined the Kraftigo waitlist.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {data && (
-            <span className="rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1 text-xs text-slate-300">
-              Total signups:{" "}
-              <span className="font-semibold">{data.length}</span>
+            <span className="rounded-full bg-[#F6F6F6] border border-[#0000001A] px-4 py-1.5 text-xs text-slate-700 font-medium shadow-sm">
+              Total signups: <span className="font-bold text-slate-900">{data.length}</span>
             </span>
           )}
           <CsvExportButton
@@ -39,15 +38,15 @@ export default function WaitlistPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3 text-xs">
+      <div className="flex flex-wrap gap-3 rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-4 text-xs shadow-sm">
         <input
-          className="h-8 w-56 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs outline-none focus:border-emerald-400"
+          className="h-9 w-full sm:w-64 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs outline-none focus:border-[#FF6600] transition-colors"
           placeholder="Search name, email, city, interest…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select
-          className="h-8 rounded-md border border-slate-700 bg-slate-950 px-2 text-xs outline-none focus:border-emerald-400"
+          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#FF6600] transition-colors"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
         >
@@ -57,7 +56,7 @@ export default function WaitlistPage() {
           <option value="BOTH">Both</option>
         </select>
         <select
-          className="h-8 rounded-md border border-slate-700 bg-slate-950 px-2 text-xs outline-none focus:border-emerald-400"
+          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#FF6600] transition-colors"
           value={contactFilter}
           onChange={(e) =>
             setContactFilter(e.target.value as typeof contactFilter)
@@ -70,25 +69,25 @@ export default function WaitlistPage() {
       </div>
 
       {isLoading && (
-        <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/70">
-          <div className="divide-y divide-slate-900">
+        <div className="overflow-hidden rounded-2xl border border-[#0000001A] bg-[#F6F6F6] shadow-sm">
+          <div className="divide-y divide-slate-100">
             {Array.from({ length: 8 }).map((_, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-3 px-3 py-2 text-xs"
+                className="flex items-center gap-4 px-6 py-4 text-xs"
               >
-                <div className="h-3 w-24 animate-pulse rounded bg-slate-800/80" />
-                <div className="h-3 w-40 animate-pulse rounded bg-slate-800/80" />
-                <div className="h-3 w-28 animate-pulse rounded bg-slate-800/80" />
-                <div className="h-3 w-16 animate-pulse rounded bg-slate-800/80" />
-                <div className="h-3 w-32 animate-pulse rounded bg-slate-800/80" />
+                <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+                <div className="h-4 w-48 animate-pulse rounded bg-slate-200" />
+                <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+                <div className="h-4 w-20 animate-pulse rounded bg-slate-200" />
+                <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
               </div>
             ))}
           </div>
         </div>
       )}
       {isError && (
-        <p className="text-xs text-rose-300">
+        <p className="text-xs text-red-500 font-medium">
           Failed to load waitlist: {error?.message || "Unknown error"}
         </p>
       )}
@@ -96,7 +95,7 @@ export default function WaitlistPage() {
       {!isLoading && !isError && (
         <>
           {!data?.length ? (
-            <p className="text-xs text-slate-400">
+            <p className="text-sm text-slate-500">
               No one is currently on the waitlist. Once users sign up, they
               will appear here for review.
             </p>
