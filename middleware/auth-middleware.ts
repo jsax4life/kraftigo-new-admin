@@ -1,8 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
-import { AdminJwtSchema } from "@/lib/auth";
-import { canAccess, type Permission } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 
 const PUBLIC_PATHS = ["/login", "/_next", "/favicon.ico"];
 

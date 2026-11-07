@@ -25,12 +25,12 @@ import {
   CreditCard,
   BriefcaseBusiness,
   Wrench,
-  BarChart2
+  BarChart2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import Loader from "../ui/loader";
 import Footer from "../ui/footer";
-import Image from "next/image"
+import Image from "next/image";
 
 type NavItem = {
   href?: string;
@@ -47,36 +47,40 @@ const navItems: NavItem[] = [
     children: [
       { href: "/admin/customers", label: "Customers" },
       { href: "/admin/krafters", label: "Krafters" },
-      { href: "/admin/staff", label: "Staff" }
-    ]
+      { href: "/admin/staff", label: "Staff" },
+    ],
   },
   { href: "/admin/krafts", label: "Kraft Management", icon: CheckCircle },
-  { href: "/admin/bookings", label: "Booking Management", icon: BriefcaseBusiness },
+  {
+    href: "/admin/bookings",
+    label: "Booking Management",
+    icon: BriefcaseBusiness,
+  },
   { href: "/admin/waitlist", label: "Waitlist Management", icon: ListChecks },
   { href: "/admin/disputes", label: "Disputes", icon: ShieldAlert },
   { href: "/admin/risk", label: "Risk & Fraud", icon: Activity },
   {
     href: "/admin/payment-operations",
     label: "Payment Operations",
-    icon: CreditCard
+    icon: CreditCard,
   },
   { href: "/admin/financials", label: "Financials & Payouts", icon: Wallet },
   { href: "/admin/marketing", label: "Marketing & Ads", icon: ShoppingBag },
-  { href: "/admin/support", label: "Customer Support", icon: Headphones },
-  { href: "/admin/services", label: "Services", icon: Wrench },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
-  { href: "/admin/operations", label: "Operations & Content", icon: AlignLeft },
-  { href: "/admin/settings", label: "Settings & Permissions", icon: Settings }
+  // { href: "/admin/support", label: "Customer Support", icon: Headphones },
+  // { href: "/admin/services", label: "Services", icon: Wrench },
+  // { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
+  // { href: "/admin/operations", label: "Operations & Content", icon: AlignLeft },
+  // { href: "/admin/settings", label: "Settings & Permissions", icon: Settings }
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter(); 
+  const router = useRouter();
   const { user, logout, isLoading, isAuthenticated } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
-    "User Management": true
+    "User Management": true,
   });
 
   const toggleMenu = (label: string) => {
@@ -104,12 +108,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
         <aside
-          className={`hidden shrink-0 flex-col border-r border-[#0000001A] bg-white px-3 py-4 transition-all duration-200 md:flex ${collapsed ? "w-16" : "w-100"
-            }`}
+          className={`hidden shrink-0 flex-col border-r border-[#0000001A] bg-white px-3 py-4 transition-all duration-200 md:flex ${
+            collapsed ? "w-16" : "w-100"
+          }`}
         >
           <div className="mb-8 flex items-center px-2">
             {!collapsed && (
-              <Image src='/ban.svg' alt="banner" width={200} height={200} />
+              <Image src="/ban.svg" alt="banner" width={200} height={200} />
             )}
             <button
               type="button"
@@ -118,8 +123,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               <ChevronLeft
-                className={`h-3 w-3 transition-transform ${collapsed ? "rotate-180" : ""
-                  }`}
+                className={`h-3 w-3 transition-transform ${
+                  collapsed ? "rotate-180" : ""
+                }`}
               />
             </button>
           </div>
@@ -137,7 +143,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     >
                       <div className="flex items-center gap-3">
                         <Icon className="h-5 w-5" />
-                        {!collapsed && <span className="font-medium">{item.label}</span>}
+                        {!collapsed && (
+                          <span className="font-medium">{item.label}</span>
+                        )}
                       </div>
                       {!collapsed && (
                         <ChevronDown
@@ -153,10 +161,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
                             <Link
                               key={child.href}
                               href={child.href}
-                              className={`flex items-center rounded-lg px-3 py-2 transition-colors ${childActive
-                                ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
-                                : "text-slate-600 hover:bg-slate-50"
-                                }`}
+                              className={`flex items-center rounded-lg px-3 py-2 transition-colors ${
+                                childActive
+                                  ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
+                                  : "text-slate-600 hover:bg-slate-50"
+                              }`}
                             >
                               <span>{child.label}</span>
                             </Link>
@@ -173,13 +182,16 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.href || item.label}
                   href={item.href || "#"}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${active
-                    ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
-                    : "text-slate-600 hover:bg-slate-50"
-                    }`}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+                    active
+                      ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
+                      : "text-slate-600 hover:bg-slate-50"
+                  }`}
                 >
                   <Icon className="h-5 w-5" />
-                  {!collapsed && <span className="font-medium">{item.label}</span>}
+                  {!collapsed && (
+                    <span className="font-medium">{item.label}</span>
+                  )}
                 </Link>
               );
             })}
@@ -191,7 +203,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 z-40 flex md:hidden">
             <div className="w-60 border-r border-slate-200 bg-white px-3 py-4">
               <div className="mb-4 flex items-center gap-2 px-2">
-                <Image src='/ban.svg' alt="banner" width={100} height={100} />
+                <Image src="/ban.svg" alt="banner" width={100} height={100} />
               </div>
               <nav className="flex flex-1 flex-col gap-2 text-sm mt-4">
                 {navItems.map((item) => {
@@ -216,16 +228,19 @@ export function AdminShell({ children }: { children: ReactNode }) {
                         {isExpanded && (
                           <div className="mt-1 flex flex-col gap-1 pl-11 pr-3">
                             {item.children.map((child) => {
-                              const childActive = pathname?.startsWith(child.href);
+                              const childActive = pathname?.startsWith(
+                                child.href,
+                              );
                               return (
                                 <Link
                                   key={child.href}
                                   href={child.href}
                                   onClick={() => setMobileOpen(false)}
-                                  className={`flex items-center rounded-lg px-3 py-3 transition-colors ${childActive
-                                    ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
-                                    : "text-slate-600 hover:bg-slate-50"
-                                    }`}
+                                  className={`flex items-center rounded-lg px-3 py-3 transition-colors ${
+                                    childActive
+                                      ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
+                                      : "text-slate-600 hover:bg-slate-50"
+                                  }`}
                                 >
                                   <span>{child.label}</span>
                                 </Link>
@@ -243,10 +258,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
                       key={item.href || item.label}
                       href={item.href || "#"}
                       onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${active
-                        ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
-                        : "text-slate-600 hover:bg-slate-50"
-                        }`}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+                        active
+                          ? "bg-[#FFF0E5] text-[#FF6600] font-medium"
+                          : "text-slate-600 hover:bg-slate-50"
+                      }`}
                     >
                       <Icon className="h-5 w-5" />
                       <span className="font-medium">{item.label}</span>
@@ -298,7 +314,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     Welcome Back
                   </span>
                   <span className="text-[14px] font-medium text-slate-900 mt-0.5 capitalize">
-                    {user?.email?.split('@')[0] || "Admin"}
+                    {user?.email?.split("@")[0] || "Admin"}
                   </span>
                   <span className="text-[8px] font-bold text-[#FF6600] mt-0.5">
                     Admin Access
@@ -323,9 +339,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-6">
-            <div className="mx-auto w-full max-w-7xl">
-              {children}
-            </div>
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>
         </div>
       </div>
@@ -333,4 +347,3 @@ export function AdminShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

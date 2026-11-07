@@ -111,6 +111,37 @@ const CustomActiveDot = (props: any) => {
   );
 };
 
+function MetricCardInfo({
+  title,
+  description
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div
+      className="relative group inline-flex items-center"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
+      <button
+        type="button"
+        aria-label={`${title} description`}
+        className="rounded-full p-0.5 hover:bg-black/5 transition-colors focus:outline-none"
+      >
+        <Info className="h-4 w-4 text-black/80 hover:text-black cursor-help transition-colors" />
+      </button>
+      <div className="pointer-events-none absolute right-0 top-full z-30 mt-2 hidden w-64 rounded-xl bg-slate-900/95 p-3 text-[11px] font-normal leading-relaxed text-slate-100 shadow-xl ring-1 ring-white/10 backdrop-blur-sm group-hover:block">
+        <div className="absolute -top-1 right-2.5 h-2 w-2 rotate-45 bg-slate-900/95" />
+        <span className="font-semibold text-white block mb-0.5">{title}</span>
+        {description}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data, isLoading, isError, error } = useDashboardStats();
 
@@ -220,7 +251,10 @@ export default function DashboardPage() {
         <div className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-5">
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
             <span>Total Revenue</span>
-            <Info className="h-4 w-4 text-black" />
+            <MetricCardInfo
+              title="Total Revenue"
+              description="Gross platform earnings and booking volume processed across completed transactions for the selected timeframe."
+            />
           </div>
           <div className="mt-2 text-[22px] font-mabry font-extrabold text-slate-900">
             {isSummaryLoading
@@ -236,7 +270,10 @@ export default function DashboardPage() {
         <div className="rounded-2xl border border-[#0000001A] bg-[#F6F6F6] p-5">
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
             <span>Active Users</span>
-            <Info className="h-4 w-4 text-black" />
+            <MetricCardInfo
+              title="Active Users"
+              description="Unique customers and krafters who have actively logged in, engaged, or completed transactions on the platform."
+            />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-[22px] font-mabry font-extrabold text-slate-900">
@@ -263,7 +300,10 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
             <span>Total Active Krafts</span>
-            <Info className="h-4 w-4 text-black" />
+            <MetricCardInfo
+              title="Total Active Krafts"
+              description="Live, ongoing, or scheduled service bookings currently active across registered krafters."
+            />
           </div>
           <div className="mt-2 text-[22px] font-mabry font-extrabold text-slate-900">
             {isSummaryLoading
@@ -296,7 +336,10 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between text-xs text-slate-900 font-medium">
             <span>Open Support Tickets</span>
-            <Info className="h-4 w-4 text-black" />
+            <MetricCardInfo
+              title="Open Support Tickets"
+              description="Unresolved customer disputes, booking cancellation conflicts, and operational risk alerts requiring admin intervention."
+            />
           </div>
           <div className="mt-2 text-[22px] font-mabry font-extrabold text-slate-900">
             {isSummaryLoading

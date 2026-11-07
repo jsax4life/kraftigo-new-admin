@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { getAccessToken, isTokenExpired } from "@/lib/token-storage";
+import Loader from "@/components/ui/loader";
 import Image from "next/image";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -10,9 +12,20 @@ import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error } = useAuth();
+  const { login, isLoading, error, isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    const token = getAccessToken();
+    if (isAuthenticated || (token && !isTokenExpired(token))) {
+      router.replace("/admin/dashboard");
+    } else {
+      setIsCheckingAuth(false);
+    }
+  }, [isAuthenticated, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,6 +38,15 @@ export default function LoginPage() {
     } else {
       console.log("Login failed, error:", error);
     }
+  }
+
+  // Show loader while checking whether user is already logged in
+  if (isCheckingAuth) {
+    return (
+      <div className="flex items-center justify-center h-screen w-screen bg-white">
+        <Loader />
+      </div>
+    );
   }
 
   return (
