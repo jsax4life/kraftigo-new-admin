@@ -3,6 +3,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { getApiBaseUrl } from "@/lib/api-client";
+import { getAccessToken } from "@/lib/token-storage";
 
 export type AdminSocketEvent = {
   type?: string;
@@ -15,15 +16,6 @@ export type AdminSocketEvent = {
 
 function getSocketBaseUrl(): string {
   return process.env.NEXT_PUBLIC_WS_BASE_URL ?? getApiBaseUrl();
-}
-
-function getAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage.getItem("kraftigo_access_token");
-  } catch {
-    return null;
-  }
 }
 
 function invalidateForEvent(queryClient: QueryClient, event: AdminSocketEvent) {

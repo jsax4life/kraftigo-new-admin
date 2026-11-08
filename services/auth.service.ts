@@ -1,70 +1,33 @@
-import { apiClient } from "@/lib/api-client";
+import axios from "axios";
+import { apiClient, getApiBaseUrl } from "@/lib/api-client";
 import {
   LoginResponseSchema,
-  ApiUserSchema,
+  RefreshResponseSchema,
   AdminUserSchema,
   type AdminUser,
-  hasAdminRole
+  hasAdminRole,
 } from "@/types/auth";
+import {
+  getAccessToken,
+  setAccessToken,
+  getRefreshToken,
+  setRefreshToken,
+  getAdminUser,
+  setAdminUser,
+  clearAuthStorage,
+} from "@/lib/token-storage";
 
 export type LoginInput = {
   email: string;
   password: string;
 };
 
-// Token storage helpers (client-side only)
-function setAccessToken(token: string): void {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem("kraftigo_access_token", token);
-  }
-}
-
-function getAccessToken(): string | null {
-  if (typeof window !== "undefined") {
-    return window.localStorage.getItem("kraftigo_access_token");
-  }
-  return null;
-}
-
-function removeAccessToken(): void {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem("kraftigo_access_token");
-  }
-}
-
-// User storage helpers (client-side only)
-function setAdminUser(user: AdminUser): void {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem("kraftigo_admin_user", JSON.stringify(user));
-  }
-}
-
-function getAdminUser(): AdminUser | null {
-  if (typeof window !== "undefined") {
-    const userStr = window.localStorage.getItem("kraftigo_admin_user");
-    if (userStr) {
-      try {
-        return JSON.parse(userStr);
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
-function removeAdminUser(): void {
-  if (typeof window !== "undefined") {
-    window.localStorage.removeItem("kraftigo_admin_user");
-  }
-}
-
 // Transform API user to AdminUser (filter roles to admin roles only)
 function transformToAdminUser(apiUser: any): AdminUser | null {
   const adminRoles = ["SUPER_ADMIN", "ADMIN", "SUPPORT", "ANALYST"];
   const userRoles = apiUser.roles || [];
   const adminUserRoles = userRoles.filter((role: string) =>
-    adminRoles.includes(role)
+    adminRoles.includes(role),
   );
 
   if (adminUserRoles.length === 0) {
@@ -78,7 +41,7 @@ function transformToAdminUser(apiUser: any): AdminUser | null {
     status: apiUser.status,
     phone: apiUser.phone || null,
     createdAt: apiUser.createdAt,
-    updatedAt: apiUser.updatedAt
+    updatedAt: apiUser.updatedAt,
   });
 
   if (!parsed.success) {
@@ -90,7 +53,7 @@ function transformToAdminUser(apiUser: any): AdminUser | null {
       status: apiUser.status,
       phone: apiUser.phone || null,
       createdAt: apiUser.createdAt,
-      updatedAt: apiUser.updatedAt
+      updatedAt: apiUser.updatedAt,
     });
     return null;
   }
@@ -110,22 +73,31 @@ export const authService = {
     console.log("authService.login: Starting login", { email: payload.email });
     const res = await apiClient.post("/api/auth/login", payload);
     console.log("authService.login: API response received", res.data);
-    
+
     const parsed = LoginResponseSchema.safeParse(res.data);
     if (!parsed.success) {
-      console.error("authService.login: Login response validation error", parsed.error);
+      console.error(
+        "authService.login: Login response validation error",
+        parsed.error,
+      );
       console.error("authService.login: Response data", res.data);
       throw new Error("Unexpected login response structure");
     }
 
-    const { user, accessToken } = parsed.data;
+    const { user, accessToken, refreshToken } = parsed.data;
     console.log("authService.login: Parsed user", user);
 
     // Check if user has admin role
     const hasAdmin = hasAdminRole(user);
-    console.log("authService.login: hasAdminRole check", { roles: user.roles, hasAdmin });
+    console.log("authService.login: hasAdminRole check", {
+      roles: user.roles,
+      hasAdmin,
+    });
     if (!hasAdmin) {
-      console.error("authService.login: User does not have admin role", user.roles);
+      console.error(
+        "authService.login: User does not have admin role",
+        user.roles,
+      );
       throw new Error("Access denied: Admin role required");
     }
 
@@ -137,19 +109,25 @@ export const authService = {
       throw new Error("Access denied: Admin role required");
     }
 
-    // Store access token and user info
+    // Store tokens and user info
     setAccessToken(accessToken);
+    if (refreshToken) {
+      setRefreshToken(refreshToken);
+    }
     setAdminUser(adminUser);
-    console.log("authService.login: Access token and user stored");
+    console.log("authService.login: Tokens and user stored");
 
-    console.log("authService.login: Login successful, returning adminUser", adminUser);
+    console.log(
+      "authService.login: Login successful, returning adminUser",
+      adminUser,
+    );
     return adminUser;
   },
 
   /**
    * Logout:
    * - calls backend to clear session
-   * - removes accessToken from storage
+   * - clears tokens and user info from storage
    */
   async logout(): Promise<void> {
     try {
@@ -157,8 +135,7 @@ export const authService = {
     } catch {
       // Continue even if logout endpoint fails
     } finally {
-      removeAccessToken();
-      removeAdminUser();
+      clearAuthStorage();
     }
   },
 
@@ -173,24 +150,45 @@ export const authService = {
   },
 
   /**
-   * refreshToken (optional):
-   * - if backend exposes it, refresh accessToken
+   * refreshToken:
+   * - calls backend to refresh accessToken using stored refreshToken
+   * - updates stored tokens
    */
-  async refreshToken(): Promise<void> {
+  async refreshToken(): Promise<string | null> {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      clearAuthStorage();
+      return null;
+    }
+
     try {
-      const res = await apiClient.post("/api/auth/refresh");
-      const parsed = LoginResponseSchema.safeParse(res.data);
+      const res = await axios.post(
+        `${getApiBaseUrl().replace(/\/$/, "")}/api/auth/refresh`,
+        { refreshToken },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        },
+      );
+      const parsed = RefreshResponseSchema.safeParse(res.data);
       if (parsed.success && parsed.data.accessToken) {
         setAccessToken(parsed.data.accessToken);
+        if (parsed.data.refreshToken) {
+          setRefreshToken(parsed.data.refreshToken);
+        }
+        return parsed.data.accessToken;
       }
-    } catch {
-      // best-effort; ignore if not implemented server-side
+      return null;
+    } catch (err) {
+      console.error("authService.refreshToken failed", err);
+      clearAuthStorage();
+      return null;
     }
   },
 
   /**
-   * Get stored access token (for API client interceptor)
+   * Stored token getters
    */
-  getAccessToken
+  getAccessToken,
+  getRefreshToken,
 };
-
