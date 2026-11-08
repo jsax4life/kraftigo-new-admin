@@ -38,6 +38,26 @@ function formatCount(value: number | undefined): string {
   return value.toLocaleString();
 }
 
+/** Coerce API values that may be string or `{ name | label | code | ... }` into renderable text. */
+function displayText(value: unknown, fallback = "—"): string {
+  if (value == null) return fallback;
+  if (typeof value === "string") return value.trim() || fallback;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const candidate =
+      obj.name ??
+      obj.label ??
+      obj.code ??
+      obj.status ??
+      obj.displayStatus ??
+      obj.value ??
+      obj.jobTitle;
+    if (candidate != null && candidate !== value) return displayText(candidate, fallback);
+  }
+  return fallback;
+}
+
 
 
 
@@ -591,38 +611,53 @@ export default function DashboardPage() {
                   </tr>
                 ) : (
                   liveItems.map((item, index) => {
-                    const bookingCode =
-                      item.code || item.bookingReference || `#BK-${item.id.slice(0, 6)}`;
-                    const names =
-                      item.name ||
-                      (item.customerName && item.krafterName
-                        ? `${item.customerName} & ${item.krafterName}`
-                        : item.customerName || item.krafterName || "Customer & Krafter");
-                    const serviceName = item.service || item.jobTitle || "General Service";
-                    const valueDisplay =
-                      item.value != null
-                        ? String(item.value).startsWith("£") || String(item.value).startsWith("$")
-                          ? item.value
-                          : `£${item.value}`
-                        : item.amount != null
-                        ? `£${item.amount}`
-                        : item.totalPrice != null
-                        ? `£${item.totalPrice}`
-                        : "—";
-                    const statusText = item.displayStatus || item.status || "PENDING";
+                    const row = item as Record<string, unknown>;
+                    const itemId = displayText(
+                      item.id ?? item.bookingId ?? item._id ?? row.booking_id,
+                      ""
+                    );
+                    const bookingCode = displayText(
+                      item.code ?? item.bookingReference,
+                      itemId ? `#BK-${itemId.slice(0, 6)}` : `#BK-${index + 1}`
+                    );
+                    const customerName = displayText(item.customerName, "");
+                    const krafterName = displayText(item.krafterName, "");
+                    const names = displayText(
+                      item.name,
+                      customerName && krafterName
+                        ? `${customerName} & ${krafterName}`
+                        : customerName || krafterName || "Customer & Krafter"
+                    );
+                    const serviceName = displayText(
+                      item.service ?? item.jobTitle,
+                      "General Service"
+                    );
+                    const rawValue = item.value ?? item.amount ?? item.totalPrice;
+                    const valueText = displayText(rawValue, "");
+                    const valueDisplay = valueText
+                      ? valueText.startsWith("£") || valueText.startsWith("$")
+                        ? valueText
+                        : `£${valueText}`
+                      : "—";
+                    const statusText = displayText(
+                      item.displayStatus ?? item.status,
+                      "PENDING"
+                    );
+                    const statusKey = statusText.toLowerCase();
                     const actionLabel =
                       item.suggestedAction === "retry_payment"
                         ? "Retry Payment"
                         : item.suggestedAction === "view_details"
                         ? "View Details"
-                        : item.action || "View Details";
+                        : displayText(item.action, "View Details");
                     const isRetry =
                       item.suggestedAction === "retry_payment" ||
                       item.actionColor === "text-[#FF6600]";
+                    const searchTarget = itemId || bookingCode;
 
                     return (
                       <tr
-                        key={item.id}
+                        key={itemId || `${bookingCode}-${index}`}
                         className={index % 2 === 0 ? "bg-[#E6E6E6]" : "bg-[#F6F6F6]"}
                       >
                         <td className="px-6 py-4 font-semibold text-black">{bookingCode}</td>
@@ -632,14 +667,14 @@ export default function DashboardPage() {
                         <td className="px-6 py-4">
                           <span
                             className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                              statusText.toLowerCase().includes("finish") ||
-                              statusText.toLowerCase().includes("complete")
+                              statusKey.includes("finish") ||
+                              statusKey.includes("complete")
                                 ? "bg-emerald-100 text-emerald-700"
-                                : statusText.toLowerCase().includes("progress") ||
-                                  statusText.toLowerCase().includes("start")
+                                : statusKey.includes("progress") ||
+                                  statusKey.includes("start")
                                 ? "bg-blue-100 text-blue-700"
-                                : statusText.toLowerCase().includes("fail") ||
-                                  statusText.toLowerCase().includes("cancel")
+                                : statusKey.includes("fail") ||
+                                  statusKey.includes("cancel")
                                 ? "bg-rose-100 text-rose-700"
                                 : "bg-amber-100 text-amber-700"
                             }`}
@@ -649,7 +684,7 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <Link
-                            href={`/admin/bookings?search=${encodeURIComponent(item.id)}`}
+                            href={`/admin/bookings?search=${encodeURIComponent(searchTarget)}`}
                             className={`font-bold hover:underline ${
                               isRetry ? "text-[#FF6600]" : "text-black"
                             }`}
